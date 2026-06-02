@@ -25,6 +25,12 @@ export default function Topbar({ view, setView, user, logout, getInitials, pendi
                         <span className={styles.badge}>{pendingCount}</span>
                     )}
                 </button>
+                <button
+                    className={`${styles.navTab} ${view === 'metricas' ? styles.active : ''}`}
+                    onClick={() => setView('metricas')}
+                >
+                    <span>📈</span> Métricas
+                </button>
             </div>
 
             <div className={styles.right}>

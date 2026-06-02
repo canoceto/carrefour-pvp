@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useAuth, useSolicitudes, useToast, usePrioridades } from './hooks'
-import { LoginScreen, Topbar, FormView, PanelView, Toast } from './components'
+import { LoginScreen, Topbar, FormView, PanelView, MetricasView, Toast } from './components'
 
 
 export default function App() {
@@ -37,6 +37,10 @@ export default function App() {
 
         {view === 'form' && (
             <FormView user={user} onSubmit={addSolicitud} showToast={showToast} getPrioridad={getPrioridad} />
+        )}
+
+        {view === 'metricas' && (
+            <MetricasView solicitudes={solicitudes} />
         )}
 
         {view === 'panel' && (

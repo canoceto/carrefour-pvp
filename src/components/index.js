@@ -4,3 +4,4 @@ export { default as Topbar } from './Topbar/Topbar';
 export { default as FormView } from './FormView/FormView';
 export { default as PanelView } from './PanelView/PanelView';
 export { default as LoginScreen } from './LoginScreen/LoginScreen';
+export { default as MetricasView } from './MetricasView/MetricasView';
