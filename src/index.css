@@ -1,0 +1,84 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --blue: #004A97;
+  --blue-light: #0062cc;
+  --blue-dark: #003370;
+  --blue-pale: #e8f0fa;
+  --red: #E2001A;
+  --red-light: #ff1f38;
+  --red-pale: #fde8eb;
+  --white: #ffffff;
+  --off-white: #f5f7fa;
+  --gray-50: #f8f9fb;
+  --gray-100: #edf0f5;
+  --gray-200: #dde2ec;
+  --gray-300: #bdc6d8;
+  --gray-400: #8e9ab5;
+  --gray-500: #5e6d8a;
+  --gray-700: #2d3a52;
+  --gray-900: #111827;
+  --success: #009f6b;
+  --success-pale: #e6f7f2;
+  --warning: #f59e0b;
+  --shadow-sm: 0 1px 3px rgba(0,74,151,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow: 0 4px 16px rgba(0,74,151,0.1), 0 2px 4px rgba(0,0,0,0.06);
+  --shadow-lg: 0 12px 40px rgba(0,74,151,0.15), 0 4px 12px rgba(0,0,0,0.08);
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--off-white);
+  color: var(--gray-900);
+  font-family: 'Barlow', sans-serif;
+  min-height: 100vh;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="number"],
+input[type="date"],
+textarea,
+select {
+  width: 100%;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+  font-family: 'Barlow', sans-serif;
+  font-size: 14px;
+  color: var(--gray-900);
+  background: var(--gray-50);
+  outline: none;
+  transition: all 0.2s;
+  -webkit-appearance: none;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--blue);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(0,74,151,0.08);
+}
+
+input::placeholder, textarea::placeholder { color: var(--gray-300); }
+textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+
+input[type="date"] { color-scheme: light; }
+
+button { cursor: pointer; font-family: 'Barlow', sans-serif; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
