@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import Modal from '../Modal/Modal'
+import ExportModal from '../ExportModal/ExportModal'
 import styles from './PanelView.module.css'
 import { NIVEL_LABELS, DEFAULT_PRIORIDADES } from '../../hooks/usePrioridades'
 
@@ -34,7 +35,7 @@ const SECCIONES_FILTER = [
 ]
 
 function DLabel({ label }) { return <div className={styles.dLabel}>{label}</div> }
-function DVal({ val })   { return <div className={styles.dVal}>{val || '—'}</div> }
+function DVal({ val })     { return <div className={styles.dVal}>{val || '—'}</div> }
 
 function DetailGrid({ s }) {
     const items = [
@@ -88,14 +89,85 @@ function PrioridadBadge({ nivel }) {
     )
 }
 
+/* ── Formulario de respuesta reutilizable ── */
+function RespForm({ form, onChange, modalResp, bulkMode, selectedCount }) {
+    const set = (key) => (e) => onChange(f => ({ ...f, [key]: e.target.value }))
+    return (
+        <div className={styles.respArea}>
+            <div className={styles.respGrid}>
+                <div className={styles.respField}>
+                    <label className={styles.respLabel}>Estado solicitud</label>
+                    <select value={form.estadoSolicitud} onChange={set('estadoSolicitud')}>
+                        {ESTADO_OPTS.map(o => <option key={o}>{o}</option>)}
+                    </select>
+                </div>
+                <div className={styles.respField}>
+                    <label className={styles.respLabel}>Fecha posicionamiento</label>
+                    <input type="date" value={form.fechaPosicionamiento} onChange={set('fechaPosicionamiento')} />
+                </div>
+                <div className={styles.respField} style={{ gridColumn: '1/-1' }}>
+                    <label className={styles.respLabel}>Responsable contestación</label>
+                    <input type="text" value={form.responsableContestacion} onChange={set('responsableContestacion')} placeholder="email@carrefour.es" />
+                </div>
+                <div className={styles.respField} style={{ gridColumn: '1/-1' }}>
+                    <label className={styles.respLabel}>Observaciones <span style={{ color: 'var(--red)' }}>*</span></label>
+                    <textarea value={form.observaciones} onChange={set('observaciones')} placeholder="Escribe la respuesta o resolución de la solicitud..." />
+                </div>
+                <div className={styles.respField}>
+                    <label className={styles.respLabel}>Nuevo responsable</label>
+                    <input type="text" value={form.nuevoResponsable} onChange={set('nuevoResponsable')} placeholder="email@carrefour.es" />
+                </div>
+                <div className={styles.respField}>
+                    <label className={styles.respLabel}>Plan de acción</label>
+                    <input type="text" value={form.planAccion} onChange={set('planAccion')} placeholder="Descripción del plan..." />
+                </div>
+                <div className={styles.respField} style={{ gridColumn: '1/-1' }}>
+                    <label className={styles.respLabel}>Nueva asignación</label>
+                    <input type="text" value={form.nuevaAsignacion} onChange={set('nuevaAsignacion')} placeholder="Persona o equipo asignado..." />
+                </div>
+            </div>
+            <div className={styles.enviarRow}>
+                <div className={styles.enviarLabel}>
+                    <span>📧</span>
+                    <div>
+                        <strong>Enviar respuesta por email</strong>
+                        <small>
+                            {bulkMode
+                                ? `Se enviará a los correos de las ${selectedCount} solicitudes`
+                                : `Se enviará a ${modalResp?.correo}${modalResp?.cc ? ` (CC: ${modalResp.cc})` : ''}`
+                            }
+                        </small>
+                    </div>
+                </div>
+                <div className={styles.enviarToggle}>
+                    {['SI', 'NO'].map(v => (
+                        <label key={v} className={`${styles.toggleOpt} ${form.enviar === v ? styles.toggleActive : ''}`}>
+                            <input type="radio" checked={form.enviar === v} onChange={() => onChange(f => ({ ...f, enviar: v }))} />
+                            {v}
+                        </label>
+                    ))}
+                </div>
+            </div>
+        </div>
+    )
+}
+
+/* ══════════════════════════════════════════ */
+
 export default function PanelView({ solicitudes, updateSolicitud, showToast, currentUser, prioridades, updatePrioridad, resetDefaults }) {
     const [modalMover,   setModalMover]   = useState(null)
-    const [modalResp,    setModalResp]    = useState(null)
-    const [modalVer,     setModalVer]     = useState(null)
-    const [modalConfig,  setModalConfig]  = useState(false)
+    const [modalResp,    setModalResp]   = useState(null)   // null | solicitud | 'bulk'
+    const [modalVer,     setModalVer]    = useState(null)
+    const [modalConfig,  setModalConfig] = useState(false)
+    const [modalExport,  setModalExport] = useState(false)
+    const [bulkMode,     setBulkMode]    = useState(false)
+
     const [filtroEstado,  setFiltroEstado]  = useState('todos')
     const [filtroSeccion, setFiltroSeccion] = useState('todas')
     const [busqueda,      setBusqueda]      = useState('')
+
+    // Selección múltiple — persiste aunque cambien los filtros
+    const [selected, setSelected] = useState(new Set())
 
     const [respForm, setRespForm] = useState({
         estadoSolicitud: 'Realizado',
@@ -108,11 +180,22 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
         enviar: 'NO',
     })
 
+    const emptyRespForm = () => ({
+        estadoSolicitud: 'Realizado',
+        fechaPosicionamiento: new Date().toISOString().split('T')[0],
+        responsableContestacion: currentUser?.email || '',
+        observaciones: '',
+        nuevoResponsable: '',
+        planAccion: '',
+        nuevaAsignacion: '',
+        enviar: 'NO',
+    })
+
     const recibidos   = solicitudes.filter(s => s.estado === 'recibido')
     const enSeccion   = solicitudes.filter(s => s.estado === 'seccion')
     const respondidos = solicitudes.filter(s => s.estado === 'respondido')
 
-    const filtered = solicitudes
+    const filtered = useMemo(() => solicitudes
         .filter(s => filtroEstado === 'todos' || s.estado === filtroEstado)
         .filter(s => filtroSeccion === 'todas' || s.seccion === filtroSeccion)
         .filter(s => {
@@ -126,7 +209,36 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
             const pb = Number(b.prioridad) || 99
             if (pa !== pb) return pa - pb
             return b.id.localeCompare(a.id)
+        }), [solicitudes, filtroEstado, filtroSeccion, busqueda])
+
+    // Solo los no-respondidos son seleccionables
+    const selectableFiltered = filtered.filter(s => s.estado !== 'respondido')
+    const allVisibleSelected = selectableFiltered.length > 0 && selectableFiltered.every(s => selected.has(s.id))
+    const someVisibleSelected = selectableFiltered.some(s => selected.has(s.id))
+
+    const toggleSelect = (id) => {
+        setSelected(prev => {
+            const next = new Set(prev)
+            next.has(id) ? next.delete(id) : next.add(id)
+            return next
         })
+    }
+
+    const toggleAll = () => {
+        setSelected(prev => {
+            const next = new Set(prev)
+            if (allVisibleSelected) {
+                selectableFiltered.forEach(s => next.delete(s.id))
+            } else {
+                selectableFiltered.forEach(s => next.add(s.id))
+            }
+            return next
+        })
+    }
+
+    const clearSelection = () => setSelected(new Set())
+
+    /* ── Acciones ── */
 
     const confirmarMover = () => {
         updateSolicitud(modalMover.id, { estado: 'seccion' })
@@ -135,17 +247,15 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
     }
 
     const openResponder = (s) => {
+        setBulkMode(false)
         setModalResp(s)
-        setRespForm({
-            estadoSolicitud: 'Realizado',
-            fechaPosicionamiento: new Date().toISOString().split('T')[0],
-            responsableContestacion: currentUser?.email || '',
-            observaciones: '',
-            nuevoResponsable: '',
-            planAccion: '',
-            nuevaAsignacion: '',
-            enviar: 'NO',
-        })
+        setRespForm(emptyRespForm())
+    }
+
+    const openBulkResponder = () => {
+        setBulkMode(true)
+        setModalResp('bulk')
+        setRespForm(emptyRespForm())
     }
 
     const confirmarRespuesta = () => {
@@ -153,18 +263,29 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
             showToast('⚠ Las observaciones son obligatorias', 'error')
             return
         }
-        updateSolicitud(modalResp.id, {
-            estado: 'respondido',
-            fechaRespuesta: new Date().toLocaleDateString('es-ES'),
-            ...respForm,
-        })
-        showToast(
-            respForm.enviar === 'SI'
-                ? `✓ Respondido — se enviará email a ${modalResp.correo}`
-                : '✓ Marcado como respondido',
-            'success'
-        )
+        const fecha = new Date().toLocaleDateString('es-ES')
+        const update = { estado: 'respondido', fechaRespuesta: fecha, ...respForm }
+
+        if (bulkMode) {
+            selected.forEach(id => updateSolicitud(id, update))
+            showToast(`✓ ${selected.size} solicitudes marcadas como respondidas`, 'success')
+            clearSelection()
+            setBulkMode(false)
+        } else {
+            updateSolicitud(modalResp.id, update)
+            showToast(
+                respForm.enviar === 'SI'
+                    ? `✓ Respondido — se enviará email a ${modalResp.correo}`
+                    : '✓ Marcado como respondido',
+                'success'
+            )
+        }
         setModalResp(null)
+    }
+
+    const closeRespModal = () => {
+        setModalResp(null)
+        setBulkMode(false)
     }
 
     const openSheetsExport = () => {
@@ -190,12 +311,18 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
         }).catch(() => window.open(url, '_blank'))
     }
 
+    /* ── Render ── */
+
+    const respModalTitle = bulkMode
+        ? `RESPONDER ${selected.size} SOLICITUDES`
+        : 'RESPONDER SOLICITUD'
+
     return (
         <div className={styles.wrap}>
             <div className={styles.header}>
                 <div className={styles.title}>PANEL DE GESTIÓN</div>
                 <button className={styles.configBtn} onClick={() => setModalConfig(true)}>⚙ Prioridades</button>
-                <button className={styles.exportBtn} onClick={openSheetsExport}>📊 Exportar a Sheets</button>
+                <button className={styles.exportBtn} onClick={() => setModalExport(true)}>📊 Exportar a Sheets</button>
             </div>
 
             {/* Stats */}
@@ -217,10 +344,10 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
             <div className={styles.filterBar}>
                 <div className={styles.estadoTabs}>
                     {[
-                        { key: 'todos',      label: 'Todos',        count: solicitudes.length },
-                        { key: 'recibido',   label: 'Recibidos',    count: recibidos.length },
-                        { key: 'seccion',    label: 'En Sección',   count: enSeccion.length },
-                        { key: 'respondido', label: 'Respondidos',  count: respondidos.length },
+                        { key: 'todos',      label: 'Todos',       count: solicitudes.length },
+                        { key: 'recibido',   label: 'Recibidos',   count: recibidos.length },
+                        { key: 'seccion',    label: 'En Sección',  count: enSeccion.length },
+                        { key: 'respondido', label: 'Respondidos', count: respondidos.length },
                     ].map(({ key, label, count }) => (
                         <button
                             key={key}
@@ -232,13 +359,8 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                         </button>
                     ))}
                 </div>
-
                 <div className={styles.filterRight}>
-                    <select
-                        className={styles.seccionSelect}
-                        value={filtroSeccion}
-                        onChange={e => setFiltroSeccion(e.target.value)}
-                    >
+                    <select className={styles.seccionSelect} value={filtroSeccion} onChange={e => setFiltroSeccion(e.target.value)}>
                         {SECCIONES_FILTER.map(({ value, label }) => (
                             <option key={value} value={value}>{label}</option>
                         ))}
@@ -251,12 +373,30 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                             value={busqueda}
                             onChange={e => setBusqueda(e.target.value)}
                         />
-                        {busqueda && (
-                            <button className={styles.searchClear} onClick={() => setBusqueda('')}>✕</button>
-                        )}
+                        {busqueda && <button className={styles.searchClear} onClick={() => setBusqueda('')}>✕</button>}
                     </div>
                 </div>
             </div>
+
+            {/* Barra de acción masiva */}
+            {selected.size > 0 && (
+                <div className={styles.bulkBar}>
+                    <div className={styles.bulkLeft}>
+                        <div className={styles.bulkCount}>{selected.size}</div>
+                        <span className={styles.bulkCountLabel}>
+                            solicitud{selected.size !== 1 ? 'es' : ''} seleccionada{selected.size !== 1 ? 's' : ''}
+                        </span>
+                    </div>
+                    <div className={styles.bulkActions}>
+                        <button className={styles.bulkRespBtn} onClick={openBulkResponder}>
+                            ✓ Responder todas ({selected.size})
+                        </button>
+                        <button className={styles.bulkClearBtn} onClick={clearSelection}>
+                            ✕ Deseleccionar
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Table */}
             <div className={styles.tableWrap}>
@@ -269,6 +409,16 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                     <table className={styles.table}>
                         <thead>
                             <tr>
+                                <th className={styles.thCheck}>
+                                    <input
+                                        type="checkbox"
+                                        className={styles.checkbox}
+                                        checked={allVisibleSelected}
+                                        ref={el => { if (el) el.indeterminate = someVisibleSelected && !allVisibleSelected }}
+                                        onChange={toggleAll}
+                                        title="Seleccionar todos los visibles"
+                                    />
+                                </th>
                                 <th>Prioridad</th>
                                 <th>Fecha</th>
                                 <th>Sección</th>
@@ -284,11 +434,26 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                         </thead>
                         <tbody>
                             {filtered.map(s => {
-                                const secClass = SECCION_COLOR[s.seccion] || styles.secDefault
+                                const secClass   = SECCION_COLOR[s.seccion] || styles.secDefault
                                 const respondido = s.estado === 'respondido'
                                 const recibido   = s.estado === 'recibido'
+                                const isSelected = selected.has(s.id)
                                 return (
-                                    <tr key={s.id} className={styles.tableRow} onClick={() => setModalVer(s)}>
+                                    <tr
+                                        key={s.id}
+                                        className={`${styles.tableRow} ${isSelected ? styles.rowSelected : ''}`}
+                                        onClick={() => setModalVer(s)}
+                                    >
+                                        <td className={styles.tdCheck} onClick={e => e.stopPropagation()}>
+                                            {!respondido && (
+                                                <input
+                                                    type="checkbox"
+                                                    className={styles.checkbox}
+                                                    checked={isSelected}
+                                                    onChange={() => toggleSelect(s.id)}
+                                                />
+                                            )}
+                                        </td>
                                         <td><PrioridadBadge nivel={s.prioridad} /></td>
                                         <td className={styles.tdDate}>{s.timestamp}</td>
                                         <td><span className={`${styles.secBadge} ${secClass}`}>{s.seccion}</span></td>
@@ -316,6 +481,7 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                 <div className={styles.tableFooter}>
                     {filtered.length} solicitud{filtered.length !== 1 ? 'es' : ''} mostrada{filtered.length !== 1 ? 's' : ''}
                     {solicitudes.length !== filtered.length && ` de ${solicitudes.length} total`}
+                    {selected.size > 0 && <span className={styles.footerSel}> · {selected.size} seleccionada{selected.size !== 1 ? 's' : ''}</span>}
                 </div>
             </div>
 
@@ -333,69 +499,37 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                 </>}
             </Modal>
 
-            {/* Modal: Responder */}
-            <Modal show={!!modalResp} onClose={() => setModalResp(null)} title="RESPONDER SOLICITUD"
+            {/* Modal: Responder (individual o masivo) */}
+            <Modal show={!!modalResp} onClose={closeRespModal} title={respModalTitle}
                    footer={<>
-                       <button className={styles.btnCancel} onClick={() => setModalResp(null)}>Cancelar</button>
+                       <button className={styles.btnCancel} onClick={closeRespModal}>Cancelar</button>
                        <button className={`${styles.btnConfirm} ${styles.green}`} onClick={confirmarRespuesta}>
-                           ✓ MARCAR COMO RESPONDIDO
+                           {bulkMode ? `✓ RESPONDER ${selected.size} SOLICITUDES` : '✓ MARCAR COMO RESPONDIDO'}
                        </button>
                    </>}>
-                {modalResp && <>
-                    <DetailGrid s={modalResp} />
-                    <div className={styles.respArea}>
-                        <div className={styles.respGrid}>
-                            <div className={styles.respField}>
-                                <label className={styles.respLabel}>Estado solicitud</label>
-                                <select value={respForm.estadoSolicitud} onChange={e => setRespForm(f => ({ ...f, estadoSolicitud: e.target.value }))}>
-                                    {ESTADO_OPTS.map(o => <option key={o}>{o}</option>)}
-                                </select>
-                            </div>
-                            <div className={styles.respField}>
-                                <label className={styles.respLabel}>Fecha posicionamiento</label>
-                                <input type="date" value={respForm.fechaPosicionamiento} onChange={e => setRespForm(f => ({ ...f, fechaPosicionamiento: e.target.value }))} />
-                            </div>
-                            <div className={styles.respField} style={{ gridColumn: '1/-1' }}>
-                                <label className={styles.respLabel}>Responsable contestación</label>
-                                <input type="text" value={respForm.responsableContestacion} onChange={e => setRespForm(f => ({ ...f, responsableContestacion: e.target.value }))} placeholder="email@carrefour.es" />
-                            </div>
-                            <div className={styles.respField} style={{ gridColumn: '1/-1' }}>
-                                <label className={styles.respLabel}>Observaciones <span style={{ color: 'var(--red)' }}>*</span></label>
-                                <textarea value={respForm.observaciones} onChange={e => setRespForm(f => ({ ...f, observaciones: e.target.value }))} placeholder="Escribe la respuesta o resolución de la solicitud..." />
-                            </div>
-                            <div className={styles.respField}>
-                                <label className={styles.respLabel}>Nuevo responsable</label>
-                                <input type="text" value={respForm.nuevoResponsable} onChange={e => setRespForm(f => ({ ...f, nuevoResponsable: e.target.value }))} placeholder="email@carrefour.es" />
-                            </div>
-                            <div className={styles.respField}>
-                                <label className={styles.respLabel}>Plan de acción</label>
-                                <input type="text" value={respForm.planAccion} onChange={e => setRespForm(f => ({ ...f, planAccion: e.target.value }))} placeholder="Descripción del plan..." />
-                            </div>
-                            <div className={styles.respField} style={{ gridColumn: '1/-1' }}>
-                                <label className={styles.respLabel}>Nueva asignación</label>
-                                <input type="text" value={respForm.nuevaAsignacion} onChange={e => setRespForm(f => ({ ...f, nuevaAsignacion: e.target.value }))} placeholder="Persona o equipo asignado..." />
-                            </div>
-                        </div>
-
-                        <div className={styles.enviarRow}>
-                            <div className={styles.enviarLabel}>
-                                <span>📧</span>
-                                <div>
-                                    <strong>Enviar respuesta por email</strong>
-                                    <small>Se enviará a {modalResp?.correo}{modalResp?.cc ? ` (CC: ${modalResp.cc})` : ''}</small>
+                {modalResp && (
+                    bulkMode ? (
+                        <div className={styles.bulkSummary}>
+                            <div className={styles.bulkSummaryIcon}>📋</div>
+                            <div>
+                                <div className={styles.bulkSummaryTitle}>{selected.size} solicitudes seleccionadas</div>
+                                <div className={styles.bulkSummaryText}>
+                                    La misma respuesta se aplicará a todas las solicitudes seleccionadas.
+                                    Los datos de cada solicitud (correo, tienda, precios) se conservan individualmente.
                                 </div>
                             </div>
-                            <div className={styles.enviarToggle}>
-                                {['SI', 'NO'].map(v => (
-                                    <label key={v} className={`${styles.toggleOpt} ${respForm.enviar === v ? styles.toggleActive : ''}`}>
-                                        <input type="radio" checked={respForm.enviar === v} onChange={() => setRespForm(f => ({ ...f, enviar: v }))} />
-                                        {v}
-                                    </label>
-                                ))}
-                            </div>
                         </div>
-                    </div>
-                </>}
+                    ) : (
+                        <DetailGrid s={modalResp} />
+                    )
+                )}
+                <RespForm
+                    form={respForm}
+                    onChange={setRespForm}
+                    modalResp={modalResp}
+                    bulkMode={bulkMode}
+                    selectedCount={selected.size}
+                />
             </Modal>
 
             {/* Modal: Configuración de prioridades */}
@@ -404,7 +538,7 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                        <button className={styles.btnCancel} onClick={() => { resetDefaults(); showToast('✓ Prioridades restauradas por defecto', 'success') }}>
                            Restaurar por defecto
                        </button>
-                       <button className={`${styles.btnConfirm}`} onClick={() => setModalConfig(false)}>
+                       <button className={styles.btnConfirm} onClick={() => setModalConfig(false)}>
                            ✓ GUARDAR Y CERRAR
                        </button>
                    </>}>
@@ -434,6 +568,14 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                     ))}
                 </div>
             </Modal>
+
+            {/* Export modal */}
+            <ExportModal
+                show={modalExport}
+                onClose={() => setModalExport(false)}
+                solicitudes={solicitudes}
+                title="EXPORTAR A SHEETS"
+            />
 
             {/* Modal: Ver detalle */}
             <Modal show={!!modalVer} onClose={() => setModalVer(null)} title="DETALLE SOLICITUD"
