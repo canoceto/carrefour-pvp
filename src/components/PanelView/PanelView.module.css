@@ -774,11 +774,20 @@
 .driveLink:hover { text-decoration: underline; }
 
 @media (max-width: 768px) {
+  .wrap        { padding: 16px 12px; }
   .stats       { grid-template-columns: 1fr 1fr; }
   .filterBar   { flex-direction: column; align-items: stretch; }
   .filterRight { flex-direction: column; }
   .searchInput { width: 100%; }
   .table th, .table td { padding: 8px 10px; }
+  .bulkBar     { flex-wrap: wrap; }
+  .bulkLeft    { flex: 1; }
+  .bulkActions { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .stats { grid-template-columns: 1fr; }
+  .estadoTabs { overflow-x: auto; }
 }
 
 @keyframes fadeIn {

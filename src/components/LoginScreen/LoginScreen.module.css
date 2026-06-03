@@ -186,3 +186,9 @@
   margin-top: 12px;
   text-align: left;
 }
+
+@media (max-width: 480px) {
+  .box { padding: 32px 24px; margin: 16px; }
+  .logoC { font-size: 36px; }
+  .title { font-size: 22px; }
+}

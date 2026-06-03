@@ -82,3 +82,12 @@
   background: var(--gray-50);
   border-top: 1px solid var(--gray-200);
 }
+
+@media (max-width: 600px) {
+  .overlay { padding: 8px; align-items: flex-end; }
+  .modal { border-radius: var(--radius) var(--radius) 0 0; max-width: 100%; }
+  .modalLg { max-height: 96vh; }
+  .body { padding: 16px; }
+  .header { padding: 14px 16px; }
+  .footer { padding: 12px 16px; flex-wrap: wrap; }
+}

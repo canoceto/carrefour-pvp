@@ -11,11 +11,11 @@ const SECCIONES = [
 ]
 
 const PETICIONES = [
-  'ALTA', 'ALTA O REACTIVACION', 'REACTIVACION', 'INACTIVACION TEMPORAL',
+  'ALTA O REACTIVACION', 'REACTIVACION', 'INACTIVACION TEMPORAL',
   'BAJA STDO', 'ETIQUETADO PROVEEDOR', 'STICKER', 'ERROR PVP',
-  'ERROR CHEQUEO', 'CAMBIO PARAMETRIZACIÓN', 'CAMBIO DE PARAMETRIZACION',
+  'ERROR CHEQUEO', 'CAMBIO PARAMETRIZACIÓN',
   'EXCEPCION CIAL', 'HOMOLOGACIÓN', 'CAMBIO PVP / POSICIONAMIENTO',
-  'POSICIONMIENTO', 'MARGEN NEGATIVO', 'LIBERAR PRECIO', 'PROCESO TARIFARIO',
+  'MARGEN NEGATIVO', 'LIBERAR PRECIO', 'PROCESO TARIFARIO',
 ]
 
 const EMPRESAS = [
@@ -130,9 +130,14 @@ export default function FormView({ user, onSubmit, showToast, getPrioridad }) {
               <input type="text" value={form.solicitante} onChange={set('solicitante')} placeholder="Nombre y apellidos" className={ic('solicitante')} />
             </Field>
           </div>
-          <Field label="Fecha de la solicitud" req>
-            <input type="date" value={form.fecha} onChange={set('fecha')} className={ic('fecha')} />
-          </Field>
+          <div className={styles.fieldRow}>
+            <Field label="Fecha de la solicitud" req>
+              <input type="date" value={form.fecha} onChange={set('fecha')} className={ic('fecha')} />
+            </Field>
+            <Field label="CC" sub="(copia de respuesta)">
+              <input type="email" value={form.cc} onChange={set('cc')} placeholder="email@carrefour.es" />
+            </Field>
+          </div>
         </div>
 
         {/* S2: Tipo */}
@@ -153,16 +158,8 @@ export default function FormView({ user, onSubmit, showToast, getPrioridad }) {
           <Field label="Empresa" req>
             <RadioGrid options={EMPRESAS.map(e => ({ value: e, label: e }))} name="empresa" value={form.empresa} onChange={(v) => setRadio('empresa', v)} error={errors.empresa} />
           </Field>
-          <div className={styles.fieldRow}>
-            <Field label="Cód. Tienda" req>
-              <input type="text" value={form.codtienda} onChange={set('codtienda')} placeholder="Ej: 32434 o Aluche" className={ic('codtienda')} />
-            </Field>
-            <Field label="CC" sub="(copia de respuesta)">
-              <input type="email" value={form.cc} onChange={set('cc')} placeholder="email@carrefour.es" />
-            </Field>
-          </div>
-          <Field label="Comentarios" sub="(opcional)">
-            <textarea value={form.comentarios} onChange={set('comentarios')} placeholder="Observaciones adicionales..." />
+          <Field label="Cód. Tienda" req>
+            <input type="text" value={form.codtienda} onChange={set('codtienda')} placeholder="Ej: 32434 o Aluche" className={ic('codtienda')} />
           </Field>
         </div>
 
@@ -171,6 +168,9 @@ export default function FormView({ user, onSubmit, showToast, getPrioridad }) {
         <div className={styles.card}>
           <Field label="SMS / Descripción" sub="(código o descripción del producto)">
             <input type="text" value={form.smsDescripcion} onChange={set('smsDescripcion')} placeholder="Ej: 867504 o COSTILLA SEMICARNUDA CRF" />
+          </Field>
+          <Field label="Comentarios" sub="(opcional)">
+            <textarea value={form.comentarios} onChange={set('comentarios')} placeholder="Observaciones adicionales sobre el producto..." />
           </Field>
           <div className={styles.fieldRow}>
             <Field label="¿Plan Sevilla?">

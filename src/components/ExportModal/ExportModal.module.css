@@ -321,3 +321,9 @@
 .btnSheets:hover:not(:disabled) { background: #145c33; }
 .btnSheets:disabled { opacity: 0.4; cursor: default; }
 .btnCopied { background: var(--success) !important; }
+
+@media (max-width: 700px) {
+  .layout { flex-direction: column; height: auto; max-height: 80vh; overflow-y: auto; }
+  .left { width: 100%; border-right: none; border-bottom: 1px solid var(--gray-200); max-height: 300px; }
+  .right { padding: 12px 16px; min-height: 240px; }
+}

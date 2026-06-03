@@ -169,6 +169,9 @@
   pointer-events: none;
 }
 .priceWrap input { padding-left: 28px; }
+.priceWrap input[type="number"]::-webkit-outer-spin-button,
+.priceWrap input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.priceWrap input[type="number"] { -moz-appearance: textfield; }
 
 /* Radio */
 .radioGrid { display: flex; flex-wrap: wrap; gap: 7px; }
@@ -253,9 +256,9 @@
   text-align: center;
 }
 
-.badgeMcdna { background: #e8f4fd; color: #0070c0; }
-.badgeLidl  { background: #fff3e0; color: #e65100; }
-.badgeAlcampo { background: #e8f5e9; color: #2e7d32; }
+.badgeMcdna   { background: #e8f5e9; color: #2e7d32; }
+.badgeLidl    { background: #e8f4fd; color: #0070c0; }
+.badgeAlcampo { background: #fde8eb; color: #b91c1c; }
 
 /* Submit */
 .btnSubmit {
@@ -279,6 +282,12 @@
 
 .btnSubmit:hover { background: var(--blue-dark); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
 .btnSubmit:active { transform: translateY(0); }
+
+@media (max-width: 768px) {
+  .wrap { padding: 20px 16px 60px; }
+  .hero { padding: 24px 20px; }
+  .hero h1 { font-size: 26px; }
+}
 
 @media (max-width: 560px) {
   .fieldRow { grid-template-columns: 1fr; }
