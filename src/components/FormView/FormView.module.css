@@ -159,7 +159,7 @@
 .priceWrap { position: relative; }
 .sym {
   position: absolute;
-  left: 12px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--blue);
@@ -168,7 +168,7 @@
   font-weight: 500;
   pointer-events: none;
 }
-.priceWrap input { padding-left: 28px; }
+.priceWrap input { padding-left: 14px; padding-right: 32px; }
 .priceWrap input[type="number"]::-webkit-outer-spin-button,
 .priceWrap input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .priceWrap input[type="number"] { -moz-appearance: textfield; }
@@ -233,15 +233,16 @@
   background: var(--gray-50);
   border: 1px solid var(--gray-200);
   border-radius: var(--radius-sm);
-  overflow: hidden;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
 }
 
 .compRow {
-  display: grid;
-  grid-template-columns: 110px 1fr;
-  align-items: center;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--gray-200);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .compRow:last-child { border-bottom: none; }
@@ -290,5 +291,7 @@
 }
 
 @media (max-width: 560px) {
-  .fieldRow { grid-template-columns: 1fr; }
+  .fieldRow  { grid-template-columns: 1fr; }
+  .compBlock { grid-template-columns: 1fr; }
+  .compRow   { flex-direction: row; align-items: center; gap: 10px; }
 }
