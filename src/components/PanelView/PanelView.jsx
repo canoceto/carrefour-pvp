@@ -26,6 +26,35 @@ const SECCION_COLOR = {
 
 const ESTADO_OPTS = ['Realizado', 'Rechazado', 'Revisado', 'Pendiente']
 
+const SORT_DEFAULT_DIR = {
+    prioridad:    'asc',
+    fecha:        'desc',
+    seccion:      'asc',
+    peticion:     'asc',
+    descripcion:  'asc',
+    empresa:      'asc',
+    pvpRec:       'desc',
+    pvpMercadona: 'desc',
+    pvpAlcampo:   'desc',
+    estado:       'asc',
+}
+
+function sortVal(s, col) {
+    switch (col) {
+        case 'prioridad':    return Number(s.prioridad) || 99
+        case 'fecha':        return s.fecha || s.id || ''
+        case 'seccion':      return s.seccion || ''
+        case 'peticion':     return s.peticion || ''
+        case 'descripcion':  return s.smsDescripcion || ''
+        case 'empresa':      return s.empresa || ''
+        case 'pvpRec':       return parseFloat(s.pvpRec) || 0
+        case 'pvpMercadona': return parseFloat(s.pvpMercadona) || 0
+        case 'pvpAlcampo':   return parseFloat(s.pvpAlcampo) || 0
+        case 'estado':       return s.estado || ''
+        default:             return ''
+    }
+}
+
 const SECCIONES_FILTER = [
     { value: 'todas',            label: 'Todas las secciones' },
     { value: 'CARNICERIA',       label: 'Carnicería' },
@@ -127,6 +156,10 @@ function RespForm({ form, onChange, modalResp, bulkMode, selectedCount }) {
                     <label className={styles.respLabel}>Nueva asignación</label>
                     <input type="text" value={form.nuevaAsignacion} onChange={set('nuevaAsignacion')} placeholder="Persona o equipo asignado..." />
                 </div>
+                <div className={styles.respField} style={{ gridColumn: '1/-1' }}>
+                    <label className={styles.respLabel}>CC respuesta <span style={{ fontWeight: 400, color: 'var(--gray-400)', textTransform: 'none' }}>(compañeros en copia)</span></label>
+                    <input type="text" value={form.ccRespuesta} onChange={set('ccRespuesta')} placeholder="email1@carrefour.es, email2@carrefour.es" />
+                </div>
             </div>
             <div className={styles.enviarRow}>
                 <div className={styles.enviarLabel}>
@@ -136,7 +169,7 @@ function RespForm({ form, onChange, modalResp, bulkMode, selectedCount }) {
                         <small>
                             {bulkMode
                                 ? `Se enviará a los correos de las ${selectedCount} solicitudes`
-                                : `Se enviará a ${modalResp?.correo}${modalResp?.cc ? ` (CC: ${modalResp.cc})` : ''}`
+                                : `Para: ${modalResp?.correo}${modalResp?.cc ? ` · CC solicitante: ${modalResp.cc}` : ''}${form.ccRespuesta ? ` · CC: ${form.ccRespuesta}` : ''}`
                             }
                         </small>
                     </div>
@@ -169,6 +202,15 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
     const [filtroEstado,  setFiltroEstado]  = useState('todos')
     const [filtroSeccion, setFiltroSeccion] = useState('todas')
     const [busqueda,      setBusqueda]      = useState('')
+    const [sortState,     setSortState]     = useState({ col: 'fecha', dir: 'desc' })
+
+    const handleSort = (col) => {
+        setSortState(prev =>
+            prev.col === col
+                ? { col, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+                : { col, dir: SORT_DEFAULT_DIR[col] ?? 'asc' }
+        )
+    }
 
     // Selección múltiple — persiste aunque cambien los filtros
     const [selected, setSelected] = useState(new Set())
@@ -181,6 +223,7 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
         nuevoResponsable: '',
         planAccion: '',
         nuevaAsignacion: '',
+        ccRespuesta: '',
         enviar: 'NO',
     })
 
@@ -192,6 +235,7 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
         nuevoResponsable: '',
         planAccion: '',
         nuevaAsignacion: '',
+        ccRespuesta: '',
         enviar: 'NO',
     })
 
@@ -209,11 +253,15 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                 .some(v => v?.toLowerCase().includes(q))
         })
         .sort((a, b) => {
-            const pa = Number(a.prioridad) || 99
-            const pb = Number(b.prioridad) || 99
+            const va = sortVal(a, sortState.col)
+            const vb = sortVal(b, sortState.col)
+            let cmp = typeof va === 'number' ? va - vb : va.localeCompare(vb, 'es')
+            if (cmp !== 0) return sortState.dir === 'asc' ? cmp : -cmp
+            // Tiebreaker: prioridad ASC → fecha DESC
+            const pa = Number(a.prioridad) || 99, pb = Number(b.prioridad) || 99
             if (pa !== pb) return pa - pb
-            return b.id.localeCompare(a.id)
-        }), [solicitudes, filtroEstado, filtroSeccion, busqueda])
+            return (b.fecha || b.id).localeCompare(a.fecha || a.id)
+        }), [solicitudes, filtroEstado, filtroSeccion, busqueda, sortState])
 
     // Solo los no-respondidos son seleccionables
     const selectableFiltered = filtered.filter(s => s.estado !== 'respondido')
@@ -424,16 +472,32 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                                         title="Seleccionar todos los visibles"
                                     />
                                 </th>
-                                <th>Prioridad</th>
-                                <th>Fecha</th>
-                                <th>Sección</th>
-                                <th>Petición</th>
-                                <th>Descripción</th>
-                                <th>Empresa · Tienda</th>
-                                <th>CRF Rec.</th>
-                                <th>Mcdna</th>
-                                <th>Alcampo</th>
-                                <th>Estado</th>
+                                {[
+                                    { col: 'prioridad',    label: 'Prioridad' },
+                                    { col: 'fecha',        label: 'Fecha' },
+                                    { col: 'seccion',      label: 'Sección' },
+                                    { col: 'peticion',     label: 'Petición' },
+                                    { col: 'descripcion',  label: 'Descripción' },
+                                    { col: 'empresa',      label: 'Empresa · Tienda' },
+                                    { col: 'pvpRec',       label: 'CRF Rec.' },
+                                    { col: 'pvpMercadona', label: 'Mcdna' },
+                                    { col: 'pvpAlcampo',   label: 'Alcampo' },
+                                    { col: 'estado',       label: 'Estado' },
+                                ].map(({ col, label }) => {
+                                    const active = sortState.col === col
+                                    return (
+                                        <th
+                                            key={col}
+                                            className={`${styles.thSortable} ${active ? styles.thSortActive : ''}`}
+                                            onClick={() => handleSort(col)}
+                                        >
+                                            {label}
+                                            <span className={styles.sortIcon}>
+                                                {active ? (sortState.dir === 'asc' ? ' ▲' : ' ▼') : ' ⇅'}
+                                            </span>
+                                        </th>
+                                    )
+                                })}
                                 <th></th>
                             </tr>
                         </thead>

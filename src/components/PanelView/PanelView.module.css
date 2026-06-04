@@ -244,6 +244,22 @@
   background: var(--gray-50);
 }
 
+.thSortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s, color 0.12s;
+}
+.thSortable:hover { background: var(--gray-100) !important; color: var(--gray-600) !important; }
+
+.thSortActive { color: var(--blue-dark) !important; }
+
+.sortIcon {
+  font-size: 8px;
+  opacity: 0.4;
+  letter-spacing: 0;
+}
+.thSortActive .sortIcon { opacity: 1; color: var(--blue); }
+
 .tableRow {
   border-bottom: 1px solid var(--gray-100);
   cursor: pointer;

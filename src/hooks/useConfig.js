@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 const CONFIG_KEY = 'crfpvp_config'
 
-export const SEED_ADMINS = ['carlosg.anoceto@gmail.com', 'marlis2.mc@gmail.com']
+export const SEED_ADMINS = ['carlosg.anoceto@gmail.com', 'marlis2.mc@gmail.com','dev@local.test']
 
 export const DEFAULT_FIELD_CONFIG = {
     correo:              { label: 'Correo electrónico',     section: 'Identificación', type: 'text',  required: true,  enabled: true },
