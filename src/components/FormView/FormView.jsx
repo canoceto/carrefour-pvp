@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import styles from './FormView.module.css'
+import { DEFAULT_FIELD_CONFIG } from '../../hooks/useConfig'
 
 const SECCIONES = [
   { value: 'FRUTERIA', label: '🍎 Frutería' },
@@ -23,10 +24,9 @@ const EMPRESAS = [
   'EXPRESS', 'CANARIAS', 'PENINSULA', 'TIENDA', 'SUPECO',
 ]
 
-const REQUIRED_FIELDS = ['correo', 'solicitante', 'fecha', 'codtienda', 'pvpRec', 'pvpMercadona', 'pvpAlcampo']
-const REQUIRED_RADIOS = ['seccion', 'peticion', 'empresa']
+export default function FormView({ user, onSubmit, showToast, getPrioridad, fieldConfig }) {
+  const fc = (key) => fieldConfig?.[key] ?? DEFAULT_FIELD_CONFIG[key]
 
-export default function FormView({ user, onSubmit, showToast, getPrioridad }) {
   const today = new Date().toISOString().split('T')[0]
 
   const empty = {
@@ -54,13 +54,24 @@ export default function FormView({ user, onSubmit, showToast, getPrioridad }) {
     }
   }, [user])
 
+  const { reqFields, reqRadios } = useMemo(() => {
+    const text = [], radio = []
+    Object.entries(fieldConfig ?? DEFAULT_FIELD_CONFIG).forEach(([key, cfg]) => {
+      if (!cfg.enabled || !cfg.required) return
+      if (cfg.type === 'radio') radio.push(key)
+      else text.push(key)
+    })
+    return { reqFields: text, reqRadios: radio }
+  }, [fieldConfig])
+
   useEffect(() => {
+    const total = reqFields.length + reqRadios.length
+    if (total === 0) { setProgress(100); return }
     let filled = 0
-    const total = REQUIRED_FIELDS.length + REQUIRED_RADIOS.length
-    REQUIRED_FIELDS.forEach(k => { if (form[k]?.toString().trim()) filled++ })
-    REQUIRED_RADIOS.forEach(k => { if (form[k]) filled++ })
+    reqFields.forEach(k => { if (form[k]?.toString().trim()) filled++ })
+    reqRadios.forEach(k => { if (form[k]) filled++ })
     setProgress(Math.round((filled / total) * 100))
-  }, [form])
+  }, [form, reqFields, reqRadios])
 
   const set = (key) => (e) => {
     setForm(f => ({ ...f, [key]: e.target.value }))
@@ -74,8 +85,8 @@ export default function FormView({ user, onSubmit, showToast, getPrioridad }) {
 
   const handleSubmit = () => {
     const newErrors = {}
-    REQUIRED_FIELDS.forEach(k => { if (!form[k]?.toString().trim()) newErrors[k] = true })
-    REQUIRED_RADIOS.forEach(k => { if (!form[k]) newErrors[k] = true })
+    reqFields.forEach(k => { if (!form[k]?.toString().trim()) newErrors[k] = true })
+    reqRadios.forEach(k => { if (!form[k]) newErrors[k] = true })
 
     if (Object.keys(newErrors).length) {
       setErrors(newErrors)
@@ -106,6 +117,9 @@ export default function FormView({ user, onSubmit, showToast, getPrioridad }) {
   }
 
   const ic = (key) => errors[key] ? styles.inputError : ''
+  const show = (key) => fc(key).enabled
+  const req  = (key) => fc(key).required && fc(key).enabled
+  const lbl  = (key) => fc(key).label
 
   return (
       <div className={styles.wrap}>
@@ -123,113 +137,153 @@ export default function FormView({ user, onSubmit, showToast, getPrioridad }) {
         <SectionHeader num="1" title="Identificación del solicitante" />
         <div className={styles.card}>
           <div className={styles.fieldRow}>
-            <Field label="Correo electrónico" req>
-              <input type="email" value={form.correo} onChange={set('correo')} placeholder="nombre@carrefour.es" className={ic('correo')} />
-            </Field>
-            <Field label="Solicitante" req>
-              <input type="text" value={form.solicitante} onChange={set('solicitante')} placeholder="Nombre y apellidos" className={ic('solicitante')} />
-            </Field>
+            {show('correo') && (
+              <Field label={lbl('correo')} req={req('correo')}>
+                <input type="email" value={form.correo} onChange={set('correo')} placeholder="nombre@carrefour.es" className={ic('correo')} />
+              </Field>
+            )}
+            {show('solicitante') && (
+              <Field label={lbl('solicitante')} req={req('solicitante')}>
+                <input type="text" value={form.solicitante} onChange={set('solicitante')} placeholder="Nombre y apellidos" className={ic('solicitante')} />
+              </Field>
+            )}
           </div>
           <div className={styles.fieldRow}>
-            <Field label="Fecha de la solicitud" req>
-              <input type="date" value={form.fecha} onChange={set('fecha')} className={ic('fecha')} />
-            </Field>
-            <Field label="CC" sub="(copia de respuesta)">
-              <input type="email" value={form.cc} onChange={set('cc')} placeholder="email@carrefour.es" />
-            </Field>
+            {show('fecha') && (
+              <Field label={lbl('fecha')} req={req('fecha')}>
+                <input type="date" value={form.fecha} onChange={set('fecha')} className={ic('fecha')} />
+              </Field>
+            )}
+            {show('cc') && (
+              <Field label={lbl('cc')} req={req('cc')}>
+                <input type="email" value={form.cc} onChange={set('cc')} placeholder="email@carrefour.es" className={ic('cc')} />
+              </Field>
+            )}
           </div>
         </div>
 
         {/* S2: Tipo */}
         <SectionHeader num="2" title="Tipo de solicitud" />
         <div className={styles.card}>
-          <Field label="Sección" req>
-            <RadioGrid options={SECCIONES} name="seccion" value={form.seccion} onChange={(v) => setRadio('seccion', v)} error={errors.seccion} />
-          </Field>
+          {show('seccion') && (
+            <Field label={lbl('seccion')} req={req('seccion')}>
+              <RadioGrid options={SECCIONES} name="seccion" value={form.seccion} onChange={(v) => setRadio('seccion', v)} error={errors.seccion} />
+            </Field>
+          )}
           <div className={styles.divider} />
-          <Field label="Petición" req>
-            <RadioGrid options={PETICIONES.map(p => ({ value: p, label: p }))} name="peticion" value={form.peticion} onChange={(v) => setRadio('peticion', v)} error={errors.peticion} />
-          </Field>
+          {show('peticion') && (
+            <Field label={lbl('peticion')} req={req('peticion')}>
+              <RadioGrid options={PETICIONES.map(p => ({ value: p, label: p }))} name="peticion" value={form.peticion} onChange={(v) => setRadio('peticion', v)} error={errors.peticion} />
+            </Field>
+          )}
         </div>
 
         {/* S3: Tienda */}
         <SectionHeader num="3" title="Identificación de tienda" />
         <div className={styles.card}>
-          <Field label="Empresa" req>
-            <RadioGrid options={EMPRESAS.map(e => ({ value: e, label: e }))} name="empresa" value={form.empresa} onChange={(v) => setRadio('empresa', v)} error={errors.empresa} />
-          </Field>
-          <Field label="Cód. Tienda" req>
-            <input type="text" value={form.codtienda} onChange={set('codtienda')} placeholder="Ej: 32434 o Aluche" className={ic('codtienda')} />
-          </Field>
+          {show('empresa') && (
+            <Field label={lbl('empresa')} req={req('empresa')}>
+              <RadioGrid options={EMPRESAS.map(e => ({ value: e, label: e }))} name="empresa" value={form.empresa} onChange={(v) => setRadio('empresa', v)} error={errors.empresa} />
+            </Field>
+          )}
+          {show('codtienda') && (
+            <Field label={lbl('codtienda')} req={req('codtienda')}>
+              <input type="text" value={form.codtienda} onChange={set('codtienda')} placeholder="Ej: 32434 o Aluche" className={ic('codtienda')} />
+            </Field>
+          )}
         </div>
 
         {/* S4: Producto */}
         <SectionHeader num="4" title="Producto" />
         <div className={styles.card}>
-          <Field label="SMS / Descripción" sub="(código o descripción del producto)">
-            <input type="text" value={form.smsDescripcion} onChange={set('smsDescripcion')} placeholder="Ej: 867504 o COSTILLA SEMICARNUDA CRF" />
-          </Field>
-          <Field label="Comentarios" sub="(opcional)">
-            <textarea value={form.comentarios} onChange={set('comentarios')} placeholder="Observaciones adicionales sobre el producto..." />
-          </Field>
-          <div className={styles.fieldRow}>
-            <Field label="¿Plan Sevilla?">
-              <div className={styles.radioGrid}>
-                {['Sí', 'No'].map(v => (
-                    <label key={v} className={`${styles.radioOpt} ${form.planSevilla === v ? styles.checked : ''}`}>
-                      <input type="radio" checked={form.planSevilla === v} onChange={() => setForm(f => ({ ...f, planSevilla: v }))} />
-                      <span className={styles.dot} />{v}
-                    </label>
-                ))}
-              </div>
+          {show('smsDescripcion') && (
+            <Field label={lbl('smsDescripcion')} req={req('smsDescripcion')}>
+              <input type="text" value={form.smsDescripcion} onChange={set('smsDescripcion')} placeholder="Ej: 867504 o COSTILLA SEMICARNUDA CRF" className={ic('smsDescripcion')} />
             </Field>
-            <Field label="¿Etiquetado Proveedor?">
-              <div className={styles.radioGrid}>
-                {['Sí', 'No'].map(v => (
-                    <label key={v} className={`${styles.radioOpt} ${form.etiquetadoProveedor === v ? styles.checked : ''}`}>
-                      <input type="radio" checked={form.etiquetadoProveedor === v} onChange={() => setForm(f => ({ ...f, etiquetadoProveedor: v }))} />
-                      <span className={styles.dot} />{v}
-                    </label>
-                ))}
-              </div>
+          )}
+          {show('comentarios') && (
+            <Field label={lbl('comentarios')} req={req('comentarios')}>
+              <textarea value={form.comentarios} onChange={set('comentarios')} placeholder="Observaciones adicionales sobre el producto..." className={ic('comentarios')} />
             </Field>
-          </div>
-          <Field label="Fecha Vigor Etiquetado" sub="(si aplica)">
-            <input type="date" value={form.fechaVigor} onChange={set('fechaVigor')} />
-          </Field>
-          <Field label="Adjuntar fichero / URL Drive" sub="(opcional)">
-            <input type="text" value={form.adjuntoUrl} onChange={set('adjuntoUrl')} placeholder="https://drive.google.com/..." />
-          </Field>
+          )}
+          {(show('planSevilla') || show('etiquetadoProveedor')) && (
+            <div className={styles.fieldRow}>
+              {show('planSevilla') && (
+                <Field label={lbl('planSevilla')} req={req('planSevilla')}>
+                  <div className={`${styles.radioGrid} ${errors.planSevilla ? styles.radioError : ''}`}>
+                    {['Sí', 'No'].map(v => (
+                      <label key={v} className={`${styles.radioOpt} ${form.planSevilla === v ? styles.checked : ''}`}>
+                        <input type="radio" checked={form.planSevilla === v} onChange={() => setForm(f => ({ ...f, planSevilla: v }))} />
+                        <span className={styles.dot} />{v}
+                      </label>
+                    ))}
+                  </div>
+                </Field>
+              )}
+              {show('etiquetadoProveedor') && (
+                <Field label={lbl('etiquetadoProveedor')} req={req('etiquetadoProveedor')}>
+                  <div className={`${styles.radioGrid} ${errors.etiquetadoProveedor ? styles.radioError : ''}`}>
+                    {['Sí', 'No'].map(v => (
+                      <label key={v} className={`${styles.radioOpt} ${form.etiquetadoProveedor === v ? styles.checked : ''}`}>
+                        <input type="radio" checked={form.etiquetadoProveedor === v} onChange={() => setForm(f => ({ ...f, etiquetadoProveedor: v }))} />
+                        <span className={styles.dot} />{v}
+                      </label>
+                    ))}
+                  </div>
+                </Field>
+              )}
+            </div>
+          )}
+          {show('fechaVigor') && (
+            <Field label={lbl('fechaVigor')} req={req('fechaVigor')}>
+              <input type="date" value={form.fechaVigor} onChange={set('fechaVigor')} className={ic('fechaVigor')} />
+            </Field>
+          )}
+          {show('adjuntoUrl') && (
+            <Field label={lbl('adjuntoUrl')} req={req('adjuntoUrl')}>
+              <input type="text" value={form.adjuntoUrl} onChange={set('adjuntoUrl')} placeholder="https://drive.google.com/..." className={ic('adjuntoUrl')} />
+            </Field>
+          )}
         </div>
 
         {/* S5: Precios */}
         <SectionHeader num="5" title="Precios" />
         <div className={styles.card}>
-          <div className={styles.fieldRow}>
-            <Field label="PVP Actual CRF" sub="(opcional)">
-              <PriceInput value={form.pvpActual} onChange={set('pvpActual')} />
-            </Field>
-            <Field label="PVP Recomendado" req>
-              <PriceInput value={form.pvpRec} onChange={set('pvpRec')} error={errors.pvpRec} />
-            </Field>
-          </div>
-          <div className={styles.divider} />
-          <Field label="Precios Competencia">
-            <div className={styles.compBlock}>
-              {[
-                { key: 'pvpMercadona', label: 'MERCADONA', cls: styles.badgeMcdna, req: true },
-                { key: 'pvpLidl',      label: 'LIDL',      cls: styles.badgeLidl,  req: false },
-                { key: 'pvpAlcampo',   label: 'ALCAMPO',   cls: styles.badgeAlcampo, req: true },
-              ].map(({ key, label, cls, req }) => (
-                  <div key={key} className={styles.compRow}>
-                <span className={`${styles.compBadge} ${cls}`}>
-                  {label}{req && <span className={styles.req}> *</span>}
-                </span>
-                    <PriceInput value={form[key]} onChange={set(key)} error={req ? errors[key] : false} />
-                  </div>
-              ))}
+          {(show('pvpActual') || show('pvpRec')) && (
+            <div className={styles.fieldRow}>
+              {show('pvpActual') && (
+                <Field label={lbl('pvpActual')} req={req('pvpActual')}>
+                  <PriceInput value={form.pvpActual} onChange={set('pvpActual')} error={errors.pvpActual} />
+                </Field>
+              )}
+              {show('pvpRec') && (
+                <Field label={lbl('pvpRec')} req={req('pvpRec')}>
+                  <PriceInput value={form.pvpRec} onChange={set('pvpRec')} error={errors.pvpRec} />
+                </Field>
+              )}
             </div>
-          </Field>
+          )}
+          {(show('pvpMercadona') || show('pvpLidl') || show('pvpAlcampo')) && (
+            <>
+              <div className={styles.divider} />
+              <Field label="Precios Competencia">
+                <div className={styles.compBlock}>
+                  {[
+                    { key: 'pvpMercadona', label: 'MERCADONA', cls: styles.badgeMcdna },
+                    { key: 'pvpLidl',      label: 'LIDL',      cls: styles.badgeLidl  },
+                    { key: 'pvpAlcampo',   label: 'ALCAMPO',   cls: styles.badgeAlcampo },
+                  ].filter(({ key }) => show(key)).map(({ key, label, cls }) => (
+                    <div key={key} className={styles.compRow}>
+                      <span className={`${styles.compBadge} ${cls}`}>
+                        {label}{req(key) && <span className={styles.req}> *</span>}
+                      </span>
+                      <PriceInput value={form[key]} onChange={set(key)} error={errors[key]} />
+                    </div>
+                  ))}
+                </div>
+              </Field>
+            </>
+          )}
         </div>
 
         <button className={styles.btnSubmit} onClick={handleSubmit}>

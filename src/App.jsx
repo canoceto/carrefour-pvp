@@ -1,14 +1,16 @@
 import React, { useState } from 'react'
-import { useAuth, useSolicitudes, useToast, usePrioridades } from './hooks'
-import { LoginScreen, Topbar, FormView, PanelView, MetricasView, Toast } from './components'
-
+import { useAuth, useSolicitudes, useToast, usePrioridades, useConfig } from './hooks'
+import { LoginScreen, Topbar, FormView, PanelView, MetricasView, ConfigView, Toast } from './components'
 
 export default function App() {
   const { user, loading, error, domainError, gsiReady, logout, renderGoogleButton, getInitials } = useAuth()
   const { solicitudes, addSolicitud, updateSolicitud } = useSolicitudes()
   const { toast, showToast } = useToast()
   const { prioridades, getPrioridad, updatePrioridad, resetDefaults } = usePrioridades()
+  const { admins, fields, addAdmin, removeAdmin, updateField, resetFields } = useConfig()
   const [view, setView] = useState('form')
+
+  const isAdmin = admins.map(a => a.toLowerCase()).includes(user?.email?.toLowerCase() ?? '')
 
   const pendingCount = solicitudes.filter(s => s.estado === 'recibido').length
 
@@ -33,17 +35,24 @@ export default function App() {
             logout={logout}
             getInitials={getInitials}
             pendingCount={pendingCount}
+            isAdmin={isAdmin}
         />
 
         {view === 'form' && (
-            <FormView user={user} onSubmit={addSolicitud} showToast={showToast} getPrioridad={getPrioridad} />
+            <FormView
+                user={user}
+                onSubmit={addSolicitud}
+                showToast={showToast}
+                getPrioridad={getPrioridad}
+                fieldConfig={fields}
+            />
         )}
 
-        {view === 'metricas' && (
+        {isAdmin && view === 'metricas' && (
             <MetricasView solicitudes={solicitudes} />
         )}
 
-        {view === 'panel' && (
+        {isAdmin && view === 'panel' && (
             <PanelView
                 solicitudes={solicitudes}
                 updateSolicitud={updateSolicitud}
@@ -52,6 +61,19 @@ export default function App() {
                 prioridades={prioridades}
                 updatePrioridad={updatePrioridad}
                 resetDefaults={resetDefaults}
+            />
+        )}
+
+        {isAdmin && view === 'config' && (
+            <ConfigView
+                admins={admins}
+                fields={fields}
+                addAdmin={addAdmin}
+                removeAdmin={removeAdmin}
+                updateField={updateField}
+                resetFields={resetFields}
+                currentUser={user}
+                showToast={showToast}
             />
         )}
 

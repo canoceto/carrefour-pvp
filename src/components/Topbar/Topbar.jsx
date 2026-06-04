@@ -1,7 +1,7 @@
 import React from 'react'
 import styles from './Topbar.module.css'
 
-export default function Topbar({view, setView, user, logout, getInitials, pendingCount}) {
+export default function Topbar({view, setView, user, logout, getInitials, pendingCount, isAdmin}) {
     return (
         <div className={styles.topbar}>
             <div className={styles.logo}>
@@ -16,21 +16,33 @@ export default function Topbar({view, setView, user, logout, getInitials, pendin
                 >
                     <span>📋</span> Nueva Solicitud
                 </button>
-                <button
-                    className={`${styles.navTab} ${view === 'panel' ? styles.active : ''}`}
-                    onClick={() => setView('panel')}
-                >
-                    <span>🗂️</span> Panel de Gestión
-                    {pendingCount > 0 && (
-                        <span className={styles.badge}>{pendingCount}</span>
-                    )}
-                </button>
-                <button
-                    className={`${styles.navTab} ${view === 'metricas' ? styles.active : ''}`}
-                    onClick={() => setView('metricas')}
-                >
-                    <span>📈</span> Métricas
-                </button>
+                {isAdmin && (
+                    <button
+                        className={`${styles.navTab} ${view === 'panel' ? styles.active : ''}`}
+                        onClick={() => setView('panel')}
+                    >
+                        <span>🗂️</span> Panel de Gestión
+                        {pendingCount > 0 && (
+                            <span className={styles.badge}>{pendingCount}</span>
+                        )}
+                    </button>
+                )}
+                {isAdmin && (
+                    <button
+                        className={`${styles.navTab} ${view === 'metricas' ? styles.active : ''}`}
+                        onClick={() => setView('metricas')}
+                    >
+                        <span>📈</span> Métricas
+                    </button>
+                )}
+                {isAdmin && (
+                    <button
+                        className={`${styles.navTab} ${view === 'config' ? styles.active : ''}`}
+                        onClick={() => setView('config')}
+                    >
+                        <span>⚙️</span> Configuración
+                    </button>
+                )}
             </div>
 
             <div className={styles.right}>

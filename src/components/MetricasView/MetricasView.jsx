@@ -128,7 +128,7 @@ export default function MetricasView({ solicitudes }) {
         // Referencias únicas tratadas (por smsDescripcion)
         const referencias = new Set(solicitudes.map(s => s.smsDescripcion).filter(Boolean)).size
 
-        // Peticiones gestionadas = han salido de "recibido" (en sección + respondidas)
+        // Peticiones gestionadas = han salido de "recibido" (en progreso + respondidas)
         const gestionadas = enSeccion.length + respondidas.length
 
         // Tendencia por mes (fecha ISO "YYYY-MM-DD")
@@ -240,7 +240,7 @@ export default function MetricasView({ solicitudes }) {
                         <div className={styles.legend}>
                             {[
                                 { label: 'Recibidas',   val: m.recibidas,   color: '#E2001A' },
-                                { label: 'En Sección',  val: m.enSeccion,   color: '#f59e0b' },
+                                { label: 'En Progreso',  val: m.enSeccion,   color: '#f59e0b' },
                                 { label: 'Respondidas', val: m.respondidas, color: '#009f6b' },
                             ].map(({ label, val, color }) => (
                                 <div key={label} className={styles.legendItem}>

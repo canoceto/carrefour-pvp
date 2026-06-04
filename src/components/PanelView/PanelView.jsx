@@ -76,7 +76,7 @@ function DetailGrid({ s }) {
 
 function EstadoBadge({ estado }) {
     if (estado === 'respondido') return <span className={`${styles.estadoChip} ${styles.chipRespondido}`}>Respondido</span>
-    if (estado === 'seccion')    return <span className={`${styles.estadoChip} ${styles.chipSeccion}`}>En Sección</span>
+    if (estado === 'seccion')    return <span className={`${styles.estadoChip} ${styles.chipSeccion}`}>En Progreso</span>
     return <span className={`${styles.estadoChip} ${styles.chipRecibido}`}>Recibido</span>
 }
 
@@ -351,7 +351,7 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                     {[
                         { key: 'todos',      label: 'Todos',       count: solicitudes.length },
                         { key: 'recibido',   label: 'Recibidos',   count: recibidos.length },
-                        { key: 'seccion',    label: 'En Sección',  count: enSeccion.length },
+                        { key: 'seccion',    label: 'En Progreso',  count: enSeccion.length },
                         { key: 'respondido', label: 'Respondidos', count: respondidos.length },
                     ].map(({ key, label, count }) => (
                         <button
@@ -471,7 +471,7 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                                         <td><EstadoBadge estado={s.estado} /></td>
                                         <td className={styles.tdActions} onClick={e => e.stopPropagation()}>
                                             {recibido && (
-                                                <button className={`${styles.btnSm} ${styles.btnSmMover}`} onClick={() => setModalMover(s)}>→ Sección</button>
+                                                <button className={`${styles.btnSm} ${styles.btnSmMover}`} onClick={() => setModalMover(s)}>→ Activar</button>
                                             )}
                                             {!respondido && (
                                                 <button className={`${styles.btnSm} ${styles.btnSmResp}`} onClick={() => openResponder(s)}>✓ Responder</button>
@@ -587,13 +587,16 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                 show={modalSolicitantes}
                 onClose={() => setModalSolicitantes(false)}
                 solicitudes={solicitudes}
-                onSelectSolicitante={(correo, solicitante) => setModalHistorial({ correo, solicitante })}
+                onSelectSolicitante={(correo, solicitante) => setModalHistorial({ correo, solicitante, fromList: true })}
             />
 
             {/* Historial por solicitante */}
             <SolicitanteHistorialModal
                 show={!!modalHistorial}
                 onClose={() => setModalHistorial(null)}
+                onBack={modalHistorial?.fromList
+                    ? () => { setModalHistorial(null); setModalSolicitantes(true) }
+                    : undefined}
                 correo={modalHistorial?.correo}
                 solicitante={modalHistorial?.solicitante}
                 solicitudes={solicitudes}

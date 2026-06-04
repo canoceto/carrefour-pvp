@@ -42,7 +42,7 @@ const GRUPOS = ['Identificación', 'Solicitud', 'Producto', 'Precios', 'Respuest
 const ESTADO_CHIPS = [
     { value: 'todos',      label: 'Todos' },
     { value: 'recibido',   label: 'Recibidos' },
-    { value: 'seccion',    label: 'En Sección' },
+    { value: 'seccion',    label: 'En Progreso' },
     { value: 'respondido', label: 'Respondidos' },
 ]
 
