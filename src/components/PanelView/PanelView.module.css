@@ -38,6 +38,23 @@
 
 .exportBtn:hover { background: #145c33; }
 
+.solicitantesBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  background: white;
+  color: var(--blue-dark);
+  border: 1.5px solid var(--blue);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.solicitantesBtn:hover { background: var(--blue); color: white; }
+
 /* Stats */
 .stats {
   display: grid;
@@ -439,6 +456,22 @@
 }
 
 .btnCancel:hover { background: var(--gray-100); }
+
+.btnHistorial {
+  flex: 1;
+  padding: 10px;
+  border: 1.5px solid var(--blue);
+  border-radius: var(--radius-sm);
+  background: var(--blue-pale);
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btnHistorial:hover { background: var(--blue); color: white; }
 
 .btnConfirm {
   flex: 2;

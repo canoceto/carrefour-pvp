@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react'
 import Modal from '../Modal/Modal'
 import ExportModal from '../ExportModal/ExportModal'
+import SolicitanteHistorialModal from '../SolicitanteHistorialModal/SolicitanteHistorialModal'
+import SolicitantesListModal from '../SolicitantesListModal/SolicitantesListModal'
 import styles from './PanelView.module.css'
 import { NIVEL_LABELS, DEFAULT_PRIORIDADES } from '../../hooks/usePrioridades'
 
@@ -155,12 +157,14 @@ function RespForm({ form, onChange, modalResp, bulkMode, selectedCount }) {
 /* ══════════════════════════════════════════ */
 
 export default function PanelView({ solicitudes, updateSolicitud, showToast, currentUser, prioridades, updatePrioridad, resetDefaults }) {
-    const [modalMover,   setModalMover]   = useState(null)
-    const [modalResp,    setModalResp]   = useState(null)   // null | solicitud | 'bulk'
-    const [modalVer,     setModalVer]    = useState(null)
-    const [modalConfig,  setModalConfig] = useState(false)
-    const [modalExport,  setModalExport] = useState(false)
-    const [bulkMode,     setBulkMode]    = useState(false)
+    const [modalMover,         setModalMover]         = useState(null)
+    const [modalResp,          setModalResp]          = useState(null)   // null | solicitud | 'bulk'
+    const [modalVer,           setModalVer]           = useState(null)
+    const [modalConfig,        setModalConfig]        = useState(false)
+    const [modalExport,        setModalExport]        = useState(false)
+    const [modalHistorial,     setModalHistorial]     = useState(null)   // null | {correo, solicitante}
+    const [modalSolicitantes,  setModalSolicitantes]  = useState(false)
+    const [bulkMode,           setBulkMode]           = useState(false)
 
     const [filtroEstado,  setFiltroEstado]  = useState('todos')
     const [filtroSeccion, setFiltroSeccion] = useState('todas')
@@ -322,6 +326,7 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
             <div className={styles.header}>
                 <div className={styles.title}>PANEL DE GESTIÓN</div>
                 <button className={styles.configBtn} onClick={() => setModalConfig(true)}>⚙ Prioridades</button>
+                <button className={styles.solicitantesBtn} onClick={() => setModalSolicitantes(true)}>👥 Solicitantes</button>
                 <button className={styles.exportBtn} onClick={() => setModalExport(true)}>📊 Exportar a Sheets</button>
             </div>
 
@@ -577,9 +582,38 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                 title="EXPORTAR A SHEETS"
             />
 
+            {/* Lista de todos los solicitantes */}
+            <SolicitantesListModal
+                show={modalSolicitantes}
+                onClose={() => setModalSolicitantes(false)}
+                solicitudes={solicitudes}
+                onSelectSolicitante={(correo, solicitante) => setModalHistorial({ correo, solicitante })}
+            />
+
+            {/* Historial por solicitante */}
+            <SolicitanteHistorialModal
+                show={!!modalHistorial}
+                onClose={() => setModalHistorial(null)}
+                correo={modalHistorial?.correo}
+                solicitante={modalHistorial?.solicitante}
+                solicitudes={solicitudes}
+            />
+
             {/* Modal: Ver detalle */}
             <Modal show={!!modalVer} onClose={() => setModalVer(null)} title="DETALLE SOLICITUD"
-                   footer={<button className={styles.btnCancel} style={{ flex: 1 }} onClick={() => setModalVer(null)}>Cerrar</button>}>
+                   footer={<>
+                       <button
+                           className={styles.btnHistorial}
+                           onClick={() => {
+                               const s = modalVer
+                               setModalVer(null)
+                               setModalHistorial({ correo: s.correo, solicitante: s.solicitante })
+                           }}
+                       >
+                           📊 Historial del solicitante
+                       </button>
+                       <button className={styles.btnCancel} style={{ flex: 1 }} onClick={() => setModalVer(null)}>Cerrar</button>
+                   </>}>
                 {modalVer && <>
                     <DetailGrid s={modalVer} />
                     {modalVer.estado === 'respondido' && (

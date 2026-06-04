@@ -6,3 +6,5 @@ export { default as PanelView } from './PanelView/PanelView';
 export { default as LoginScreen } from './LoginScreen/LoginScreen';
 export { default as MetricasView } from './MetricasView/MetricasView';
 export { default as ExportModal } from './ExportModal/ExportModal';
+export { default as SolicitanteHistorialModal } from './SolicitanteHistorialModal/SolicitanteHistorialModal';
+export { default as SolicitantesListModal } from './SolicitantesListModal/SolicitantesListModal';

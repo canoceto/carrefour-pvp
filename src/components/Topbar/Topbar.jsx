@@ -1,12 +1,12 @@
 import React from 'react'
 import styles from './Topbar.module.css'
 
-export default function Topbar({ view, setView, user, logout, getInitials, pendingCount }) {
+export default function Topbar({view, setView, user, logout, getInitials, pendingCount}) {
     return (
         <div className={styles.topbar}>
             <div className={styles.logo}>
                 <div className={styles.logoC}>C<span>●</span></div>
-                <div className={styles.logoText}>Sistema<br />PVP</div>
+                <div className={styles.logoText}>Sistema<br/>PVP</div>
             </div>
 
             <div className={styles.navTabs}>

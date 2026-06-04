@@ -61,6 +61,7 @@ export default function ExportModal({ show, onClose, solicitudes, title = 'EXPOR
     const [fechaDesde,      setFechaDesde]      = useState('')
     const [fechaHasta,      setFechaHasta]      = useState('')
     const [copied,          setCopied]          = useState(false)
+    const [colsOpen,        setColsOpen]        = useState(false)
 
     const toggleCampo = (key) => setCamposSelec(prev => {
         const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next
@@ -114,7 +115,7 @@ export default function ExportModal({ show, onClose, solicitudes, title = 'EXPOR
         }
         const header = cols.map(c => esc(c.label)).join(',')
         const rows   = filas.map(s => cols.map(c => esc(getVal(s, c.key))).join(',')).join('\n')
-        return '﻿' + header + '\n' + rows   // BOM para Excel
+        return '﻿' + header + '\n' + rows
     }
 
     const handleCopiarSheets = () => {
@@ -156,79 +157,80 @@ export default function ExportModal({ show, onClose, solicitudes, title = 'EXPOR
 
             <div className={styles.layout}>
 
-                {/* ── Panel izquierdo: filtros + columnas ── */}
-                <div className={styles.left}>
-
-                    {/* Filtros */}
-                    <div className={styles.block}>
-                        <div className={styles.blockTitle}>Filtros</div>
-
-                        <div className={styles.filterGroup}>
-                            <div className={styles.filterLabel}>Estado</div>
-                            <div className={styles.chips}>
-                                {ESTADO_CHIPS.map(({ value, label }) => (
-                                    <button key={value}
-                                        className={`${styles.chip} ${filtroEstado === value ? styles.chipOn : ''}`}
-                                        onClick={() => setFiltroEstado(value)}>
-                                        {label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className={styles.filterGroup}>
-                            <div className={styles.filterLabel}>Sección <span className={styles.hint}>vacío = todas</span></div>
-                            <div className={styles.chips}>
-                                {SECCIONES_LIST.map(sec => (
-                                    <button key={sec}
-                                        className={`${styles.chip} ${filtroSecciones.has(sec) ? styles.chipOn : ''}`}
-                                        onClick={() => toggleSeccion(sec)}>
-                                        {sec.charAt(0) + sec.slice(1).toLowerCase()}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className={styles.filterGroup}>
-                            <div className={styles.filterLabel}>Prioridad <span className={styles.hint}>vacío = todas</span></div>
-                            <div className={styles.chips}>
-                                {[1,2,3,4,5].map(p => (
-                                    <button key={p}
-                                        className={`${styles.chip} ${filtroPrios.has(p) ? styles.chipOn : ''}`}
-                                        onClick={() => togglePrio(p)}>
-                                        P{p}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className={styles.filterGroup}>
-                            <div className={styles.filterLabel}>Rango de fechas</div>
-                            <div className={styles.dateRow}>
-                                <input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} />
-                                <span>—</span>
-                                <input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} />
-                            </div>
+                {/* ── Filtros ── */}
+                <div className={styles.filtersRow}>
+                    <div className={styles.filterGroup}>
+                        <div className={styles.filterLabel}>Estado</div>
+                        <div className={styles.chips}>
+                            {ESTADO_CHIPS.map(({ value, label }) => (
+                                <button key={value}
+                                    className={`${styles.chip} ${filtroEstado === value ? styles.chipOn : ''}`}
+                                    onClick={() => setFiltroEstado(value)}>
+                                    {label}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Columnas */}
-                    <div className={styles.block}>
-                        <div className={styles.blockTitleRow}>
-                            <div className={styles.blockTitle}>Columnas</div>
-                            <div className={styles.colActions}>
+                    <div className={styles.filterGroup}>
+                        <div className={styles.filterLabel}>Sección <span className={styles.hint}>vacío = todas</span></div>
+                        <div className={styles.chips}>
+                            {SECCIONES_LIST.map(sec => (
+                                <button key={sec}
+                                    className={`${styles.chip} ${filtroSecciones.has(sec) ? styles.chipOn : ''}`}
+                                    onClick={() => toggleSeccion(sec)}>
+                                    {sec.charAt(0) + sec.slice(1).toLowerCase()}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className={styles.filterGroup}>
+                        <div className={styles.filterLabel}>Prioridad <span className={styles.hint}>vacío = todas</span></div>
+                        <div className={styles.chips}>
+                            {[1,2,3,4,5].map(p => (
+                                <button key={p}
+                                    className={`${styles.chip} ${filtroPrios.has(p) ? styles.chipOn : ''}`}
+                                    onClick={() => togglePrio(p)}>
+                                    P{p}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className={styles.filterGroup}>
+                        <div className={styles.filterLabel}>Rango de fechas</div>
+                        <div className={styles.dateRow}>
+                            <input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} />
+                            <span>—</span>
+                            <input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── Columnas ── */}
+                <div className={styles.columnsSection}>
+                    <div className={styles.columnsSectionHead} onClick={() => setColsOpen(o => !o)} style={{ cursor: 'pointer' }}>
+                        <span className={styles.collapseToggle}>
+                            <span className={colsOpen ? styles.chevronOpen : styles.chevron}>›</span>
+                            Columnas
+                            <span className={styles.colsCount}>{camposSelec.size} / {CAMPOS.length}</span>
+                        </span>
+                        {colsOpen && (
+                            <div className={styles.colActions} onClick={e => e.stopPropagation()}>
                                 <button className={styles.linkBtn} onClick={selectAll}>Todas</button>
                                 <span>·</span>
                                 <button className={styles.linkBtn} onClick={selectNone}>Ninguna</button>
                             </div>
-                        </div>
-
+                        )}
+                    </div>
+                    {colsOpen && <div className={styles.columnsGrid}>
                         {GRUPOS.map(grupo => {
                             const groupCols = CAMPOS.filter(c => c.group === grupo)
-                            const allOn = groupCols.every(c => camposSelec.has(c.key))
+                            const allOn  = groupCols.every(c => camposSelec.has(c.key))
                             const someOn = groupCols.some(c => camposSelec.has(c.key))
                             return (
-                                <div key={grupo} className={styles.grupo}>
+                                <div key={grupo} className={styles.grupoCol}>
                                     <label className={styles.grupoHead}>
                                         <input
                                             type="checkbox"
@@ -253,11 +255,11 @@ export default function ExportModal({ show, onClose, solicitudes, title = 'EXPOR
                                 </div>
                             )
                         })}
-                    </div>
+                    </div>}
                 </div>
 
-                {/* ── Panel derecho: vista previa ── */}
-                <div className={styles.right}>
+                {/* ── Vista previa ── */}
+                <div className={styles.previewSection}>
                     <div className={styles.previewHead}>
                         Vista previa
                         <span className={styles.previewCount}>{filas.length} filas · {cols.length} col.</span>
@@ -272,9 +274,7 @@ export default function ExportModal({ show, onClose, solicitudes, title = 'EXPOR
                             <div className={styles.previewScroll}>
                                 <table className={styles.previewTable}>
                                     <thead>
-                                        <tr>
-                                            {cols.map(c => <th key={c.key}>{c.label}</th>)}
-                                        </tr>
+                                        <tr>{cols.map(c => <th key={c.key}>{c.label}</th>)}</tr>
                                     </thead>
                                     <tbody>
                                         {filas.slice(0, 10).map((s, i) => (
@@ -297,6 +297,7 @@ export default function ExportModal({ show, onClose, solicitudes, title = 'EXPOR
                         </>
                     )}
                 </div>
+
             </div>
         </Modal>
     )

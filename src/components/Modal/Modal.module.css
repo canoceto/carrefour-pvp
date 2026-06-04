@@ -63,7 +63,8 @@
 .body { padding: 24px; }
 
 .modalLg {
-  max-width: 980px;
+  width: 95vw;
+  max-width: 1400px;
   max-height: 92vh;
   display: flex;
   flex-direction: column;
