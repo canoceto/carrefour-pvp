@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useAuth, useSolicitudes, useToast, usePrioridades, useConfig } from './hooks'
-import { LoginScreen, Topbar, FormView, PanelView, MetricasView, ConfigView, Toast } from './components'
+import { LoginScreen, Topbar, FormView, PanelView, MetricasView, ConfigView, CompetenciaView, Toast } from './components'
 
 export default function App() {
   const { user, loading, error, domainError, gsiReady, logout, renderGoogleButton, getInitials } = useAuth()
@@ -62,6 +62,10 @@ export default function App() {
                 updatePrioridad={updatePrioridad}
                 resetDefaults={resetDefaults}
             />
+        )}
+
+        {isAdmin && view === 'competencia' && (
+            <CompetenciaView solicitudes={solicitudes} />
         )}
 
         {isAdmin && view === 'config' && (

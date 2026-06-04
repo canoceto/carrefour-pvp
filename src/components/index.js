@@ -9,3 +9,4 @@ export { default as ExportModal } from './ExportModal/ExportModal';
 export { default as SolicitanteHistorialModal } from './SolicitanteHistorialModal/SolicitanteHistorialModal';
 export { default as SolicitantesListModal } from './SolicitantesListModal/SolicitantesListModal';
 export { default as ConfigView } from './ConfigView/ConfigView';
+export { default as CompetenciaView } from './CompetenciaView/CompetenciaView';

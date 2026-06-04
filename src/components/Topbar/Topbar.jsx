@@ -37,6 +37,14 @@ export default function Topbar({view, setView, user, logout, getInitials, pendin
                 )}
                 {isAdmin && (
                     <button
+                        className={`${styles.navTab} ${view === 'competencia' ? styles.active : ''}`}
+                        onClick={() => setView('competencia')}
+                    >
+                        <span>🏪</span> Competencia
+                    </button>
+                )}
+                {isAdmin && (
+                    <button
                         className={`${styles.navTab} ${view === 'config' ? styles.active : ''}`}
                         onClick={() => setView('config')}
                     >
