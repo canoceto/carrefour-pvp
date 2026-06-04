@@ -12,7 +12,7 @@ const SECCIONES = [
 ]
 
 const PETICIONES = [
-  'ALTA O REACTIVACION', 'REACTIVACION', 'INACTIVACION TEMPORAL',
+  'ALTA', 'REACTIVACION', 'INACTIVACION TEMPORAL',
   'BAJA STDO', 'ETIQUETADO PROVEEDOR', 'STICKER', 'ERROR PVP',
   'ERROR CHEQUEO', 'CAMBIO PARAMETRIZACIÓN',
   'EXCEPCION CIAL', 'HOMOLOGACIÓN', 'CAMBIO PVP / POSICIONAMIENTO',
@@ -58,11 +58,13 @@ export default function FormView({ user, onSubmit, showToast, getPrioridad, fiel
     const text = [], radio = []
     Object.entries(fieldConfig ?? DEFAULT_FIELD_CONFIG).forEach(([key, cfg]) => {
       if (!cfg.enabled || !cfg.required) return
+      // codtienda solo obligatorio cuando la empresa seleccionada es 'TIENDA'
+      if (key === 'codtienda' && form.empresa !== 'TIENDA') return
       if (cfg.type === 'radio') radio.push(key)
       else text.push(key)
     })
     return { reqFields: text, reqRadios: radio }
-  }, [fieldConfig])
+  }, [fieldConfig, form.empresa])
 
   useEffect(() => {
     const total = reqFields.length + reqRadios.length
@@ -116,9 +118,12 @@ export default function FormView({ user, onSubmit, showToast, getPrioridad, fiel
     showToast('✓ Solicitud registrada correctamente', 'success')
   }
 
-  const ic = (key) => errors[key] ? styles.inputError : ''
+  const ic   = (key) => errors[key] ? styles.inputError : ''
   const show = (key) => fc(key).enabled
-  const req  = (key) => fc(key).required && fc(key).enabled
+  const req  = (key) => {
+    if (key === 'codtienda') return fc(key).enabled && form.empresa === 'TIENDA'
+    return fc(key).required && fc(key).enabled
+  }
   const lbl  = (key) => fc(key).label
 
   return (
@@ -277,7 +282,7 @@ export default function FormView({ user, onSubmit, showToast, getPrioridad, fiel
                       <span className={`${styles.compBadge} ${cls}`}>
                         {label}{req(key) && <span className={styles.req}> *</span>}
                       </span>
-                      <PriceInput value={form[key]} onChange={set(key)} error={errors[key]} />
+                      <PriceInput value={form[key]} onChange={set(key)} error={errors[key]} freeText />
                     </div>
                   ))}
                 </div>
@@ -316,12 +321,30 @@ function Field({ label, req, sub, children }) {
   )
 }
 
-function PriceInput({ value, onChange, error }) {
+function PriceInput({ value, onChange, error, freeText = false }) {
   return (
       <div className={styles.priceWrap}>
-        <span className={styles.sym}>€</span>
-        <input type="number" value={value} onChange={onChange} placeholder="0.00" step="0.01" min="0"
-               className={error ? styles.inputError : ''} />
+        <span className={`${styles.sym} ${freeText ? styles.symFree : ''}`}>€</span>
+        {freeText ? (
+          <input
+            type="text"
+            inputMode="decimal"
+            value={value}
+            onChange={onChange}
+            placeholder="1.99 o texto"
+            className={error ? styles.inputError : ''}
+          />
+        ) : (
+          <input
+            type="number"
+            value={value}
+            onChange={onChange}
+            placeholder="0.00"
+            step="0.01"
+            min="0"
+            className={error ? styles.inputError : ''}
+          />
+        )}
       </div>
   )
 }

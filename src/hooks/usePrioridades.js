@@ -1,6 +1,5 @@
-import { useState } from 'react'
-
-const STORAGE_KEY = 'crfpvp_prioridades'
+import { useState, useEffect, useCallback } from 'react'
+import { prioridadesService } from '../services'
 
 export const NIVEL_LABELS = {
     1: 'Urgente',
@@ -20,8 +19,7 @@ export const DEFAULT_PRIORIDADES = {
     'ETIQUETADO PROVEEDOR':         2,
     'HOMOLOGACIÓN':                 3,
     'PROCESO TARIFARIO':            3,
-    'ALTA O REACTIVACION':          4,
-    'ALTA':                         4,
+    'ALTA':          4,
     'REACTIVACION':                 4,
     'INACTIVACION TEMPORAL':        4,
     'BAJA STDO':                    4,
@@ -31,35 +29,35 @@ export const DEFAULT_PRIORIDADES = {
     'POSICIONMIENTO':               2,
 }
 
-function load() {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY)
-        if (raw) return { ...DEFAULT_PRIORIDADES, ...JSON.parse(raw) }
-    } catch {}
-    return { ...DEFAULT_PRIORIDADES }
-}
-
-function save(data) {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)) } catch {}
-}
-
 export function usePrioridades() {
-    const [prioridades, setPrioridades] = useState(() => load())
+    const [prioridades, setPrioridades] = useState({ ...DEFAULT_PRIORIDADES })
+    const [loading,     setLoading]     = useState(true)
 
-    const getPrioridad = (peticion) => prioridades[peticion] ?? 5
+    useEffect(() => {
+        prioridadesService.get()
+            .then(data => { setPrioridades(data); setLoading(false) })
+            .catch(() => setLoading(false))
+    }, [])
 
-    const updatePrioridad = (peticion, nivel) => {
-        setPrioridades(prev => {
-            const next = { ...prev, [peticion]: Number(nivel) }
-            save(next)
-            return next
-        })
-    }
+    const getPrioridad = useCallback((peticion) => prioridades[peticion] ?? 5, [prioridades])
 
-    const resetDefaults = () => {
-        setPrioridades({ ...DEFAULT_PRIORIDADES })
-        save({ ...DEFAULT_PRIORIDADES })
-    }
+    const updatePrioridad = useCallback(async (peticion, nivel) => {
+        const next = { ...prioridades, [peticion]: Number(nivel) }
+        setPrioridades(next)
+        try {
+            await prioridadesService.save(next)
+        } catch {
+            setPrioridades(prioridades) // rollback
+        }
+    }, [prioridades])
 
-    return { prioridades, getPrioridad, updatePrioridad, resetDefaults }
+    const resetDefaults = useCallback(async () => {
+        const def = { ...DEFAULT_PRIORIDADES }
+        setPrioridades(def)
+        try {
+            await prioridadesService.save(def)
+        } catch {}
+    }, [])
+
+    return { prioridades, loading, getPrioridad, updatePrioridad, resetDefaults }
 }

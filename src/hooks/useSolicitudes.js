@@ -1,40 +1,44 @@
-import { useState, useEffect } from 'react'
-
-const STORAGE_KEY = 'crfpvp_solicitudes'
-
-function loadFromStorage() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
-  } catch {
-    return []
-  }
-}
-
-function saveToStorage(data) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-  } catch {}
-}
+import { useState, useEffect, useCallback } from 'react'
+import { solicitudesService } from '../services'
 
 export function useSolicitudes() {
-  const [solicitudes, setSolicitudes] = useState(() => loadFromStorage())
+    const [solicitudes, setSolicitudes] = useState([])
+    const [loading,     setLoading]     = useState(true)
+    const [error,       setError]       = useState(null)
 
-  const addSolicitud = (s) => {
-    setSolicitudes(prev => {
-      const next = [...prev, s]
-      saveToStorage(next)
-      return next
-    })
-  }
+    useEffect(() => {
+        solicitudesService.getAll()
+            .then(data => { setSolicitudes(data); setLoading(false) })
+            .catch(err => { setError(err.message); setLoading(false) })
+    }, [])
 
-  const updateSolicitud = (id, changes) => {
-    setSolicitudes(prev => {
-      const next = prev.map(s => s.id === id ? { ...s, ...changes } : s)
-      saveToStorage(next)
-      return next
-    })
-  }
+    const addSolicitud = useCallback(async (solicitud) => {
+        // Optimistic: muestra inmediatamente en la UI
+        setSolicitudes(prev => [...prev, solicitud])
+        try {
+            const saved = await solicitudesService.create(solicitud)
+            // Reemplaza con la respuesta del servidor (por si el backend añade campos)
+            setSolicitudes(prev => prev.map(s => s.id === solicitud.id ? saved : s))
+        } catch (err) {
+            // Rollback
+            setSolicitudes(prev => prev.filter(s => s.id !== solicitud.id))
+            throw err
+        }
+    }, [])
 
-  return { solicitudes, addSolicitud, updateSolicitud }
+    const updateSolicitud = useCallback(async (id, changes) => {
+        // Optimistic
+        setSolicitudes(prev => prev.map(s => s.id === id ? { ...s, ...changes } : s))
+        try {
+            await solicitudesService.update(id, changes)
+        } catch (err) {
+            // Recargar estado desde la fuente en caso de error
+            solicitudesService.getAll()
+                .then(setSolicitudes)
+                .catch(() => {})
+            throw err
+        }
+    }, [])
+
+    return { solicitudes, loading, error, addSolicitud, updateSolicitud }
 }

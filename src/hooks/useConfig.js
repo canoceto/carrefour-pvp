@@ -1,8 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { configService } from '../services'
 
-const CONFIG_KEY = 'crfpvp_config'
-
-export const SEED_ADMINS = ['carlosg.anoceto@gmail.com', 'marlis2.mc@gmail.com','dev@local.test']
+export const SEED_ADMINS = ['carlosg.anoceto@gmail.com', 'marlis2.mc@gmail.com', 'dev@local.test']
 
 export const DEFAULT_FIELD_CONFIG = {
     correo:              { label: 'Correo electrónico',     section: 'Identificación', type: 'text',  required: true,  enabled: true },
@@ -26,54 +25,42 @@ export const DEFAULT_FIELD_CONFIG = {
     pvpAlcampo:          { label: 'PVP Alcampo',            section: 'Precios',        type: 'price', required: true,  enabled: true },
 }
 
-function load() {
-    try {
-        const raw = localStorage.getItem(CONFIG_KEY)
-        if (raw) return JSON.parse(raw)
-    } catch {}
-    return null
-}
-
-function merge(saved) {
-    const fields = {}
-    Object.keys(DEFAULT_FIELD_CONFIG).forEach(k => {
-        fields[k] = { ...DEFAULT_FIELD_CONFIG[k], ...(saved?.fields?.[k] || {}) }
-    })
-    return {
-        admins: saved?.admins ?? [...SEED_ADMINS],
-        fields,
-    }
-}
-
 export function useConfig() {
-    const [config, setConfig] = useState(() => merge(load()))
+    const [config,  setConfig]  = useState({ admins: [...SEED_ADMINS], fields: { ...DEFAULT_FIELD_CONFIG } })
+    const [loading, setLoading] = useState(true)
 
-    const persist = (next) => {
+    useEffect(() => {
+        configService.get()
+            .then(data => { setConfig(data); setLoading(false) })
+            .catch(() => setLoading(false))
+    }, [])
+
+    const persist = useCallback(async (next) => {
         setConfig(next)
-        try { localStorage.setItem(CONFIG_KEY, JSON.stringify(next)) } catch {}
-    }
+        try { await configService.save(next) } catch {}
+    }, [])
 
-    const addAdmin = (email) => {
+    const addAdmin = useCallback(async (email) => {
         const e = email.trim().toLowerCase()
         if (!e || config.admins.map(a => a.toLowerCase()).includes(e)) return false
-        persist({ ...config, admins: [...config.admins, e] })
+        await persist({ ...config, admins: [...config.admins, e] })
         return true
-    }
+    }, [config, persist])
 
-    const removeAdmin = (email) => {
-        persist({ ...config, admins: config.admins.filter(a => a !== email) })
-    }
+    const removeAdmin = useCallback(async (email) => {
+        await persist({ ...config, admins: config.admins.filter(a => a !== email) })
+    }, [config, persist])
 
-    const updateField = (key, changes) => {
-        persist({
+    const updateField = useCallback(async (key, changes) => {
+        await persist({
             ...config,
             fields: { ...config.fields, [key]: { ...config.fields[key], ...changes } },
         })
-    }
+    }, [config, persist])
 
-    const resetFields = () => {
-        persist({ ...config, fields: { ...DEFAULT_FIELD_CONFIG } })
-    }
+    const resetFields = useCallback(async () => {
+        await persist({ ...config, fields: { ...DEFAULT_FIELD_CONFIG } })
+    }, [config, persist])
 
-    return { admins: config.admins, fields: config.fields, addAdmin, removeAdmin, updateField, resetFields }
+    return { admins: config.admins, fields: config.fields, loading, addAdmin, removeAdmin, updateField, resetFields }
 }
