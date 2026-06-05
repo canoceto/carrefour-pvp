@@ -1,7 +1,7 @@
 import React from 'react'
 import styles from './Topbar.module.css'
 
-export default function Topbar({view, setView, user, logout, getInitials, pendingCount, isAdmin}) {
+export default function Topbar({view, setView, user, logout, getInitials, pendingCount, isAdmin, onExportSheets}) {
     return (
         <div className={styles.topbar}>
             <div className={styles.logo}>
@@ -61,14 +61,9 @@ export default function Topbar({view, setView, user, logout, getInitials, pendin
                         <button className={styles.logoutBtn} onClick={logout}>Salir</button>
                     </div>
                 )}
-                <a
-                    href="https://docs.google.com/spreadsheets/d/1RbfhsLHWqqWGKsqV0d7-PQUAedDOVfs9QwfK9nPV-X0/edit"
-                    target="_blank"
-                    rel="noreferrer"
-                    className={styles.sheetsBtn}
-                >
-                    📊 Ver Sheets
-                </a>
+                <button className={styles.sheetsBtn} onClick={onExportSheets}>
+                    📊 Exportar a Sheets
+                </button>
             </div>
         </div>
     )

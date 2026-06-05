@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useAuth, useSolicitudes, useToast, usePrioridades, useConfig } from './hooks'
-import { LoginScreen, Topbar, FormView, PanelView, MetricasView, ConfigView, CompetenciaView, Toast } from './components'
+import { LoginScreen, Topbar, FormView, PanelView, MetricasView, ConfigView, CompetenciaView, Toast, ExportModal } from './components'
 import { isApiMode } from './services'
 
 function DataLoader() {
@@ -28,6 +28,7 @@ export default function App() {
   const { prioridades, loading: loadingPrio, getPrioridad, updatePrioridad, resetDefaults } = usePrioridades()
   const { admins, fields, loading: loadingCfg, addAdmin, removeAdmin, updateField, resetFields } = useConfig()
   const [view, setView] = useState('form')
+  const [modalExport, setModalExport] = useState(false)
 
   const isAdmin = admins.map(a => a.toLowerCase()).includes(user?.email?.toLowerCase() ?? '')
   const pendingCount = solicitudes.filter(s => s.estado === 'recibido').length
@@ -77,6 +78,7 @@ export default function App() {
         getInitials={getInitials}
         pendingCount={pendingCount}
         isAdmin={isAdmin}
+        onExportSheets={() => setModalExport(true)}
       />
 
       {view === 'form' && (
@@ -121,6 +123,13 @@ export default function App() {
           showToast={showToast}
         />
       )}
+
+      <ExportModal
+        show={modalExport}
+        onClose={() => setModalExport(false)}
+        solicitudes={solicitudes}
+        title="EXPORTAR A SHEETS"
+      />
 
       <Toast toast={toast} />
     </>

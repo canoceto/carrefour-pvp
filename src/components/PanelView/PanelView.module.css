@@ -34,6 +34,8 @@
   font-size: 12px;
   font-weight: 600;
   transition: all 0.2s;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .exportBtn:hover { background: #145c33; }

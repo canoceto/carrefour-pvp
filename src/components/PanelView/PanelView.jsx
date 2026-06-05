@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react'
 import Modal from '../Modal/Modal'
-import ExportModal from '../ExportModal/ExportModal'
 import SolicitanteHistorialModal from '../SolicitanteHistorialModal/SolicitanteHistorialModal'
 import SolicitantesListModal from '../SolicitantesListModal/SolicitantesListModal'
 import styles from './PanelView.module.css'
@@ -194,7 +193,6 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
     const [modalResp,          setModalResp]          = useState(null)   // null | solicitud | 'bulk'
     const [modalVer,           setModalVer]           = useState(null)
     const [modalConfig,        setModalConfig]        = useState(false)
-    const [modalExport,        setModalExport]        = useState(false)
     const [modalHistorial,     setModalHistorial]     = useState(null)   // null | {correo, solicitante}
     const [modalSolicitantes,  setModalSolicitantes]  = useState(false)
     const [bulkMode,           setBulkMode]           = useState(false)
@@ -375,7 +373,12 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                 <div className={styles.title}>PANEL DE GESTIÓN</div>
                 <button className={styles.configBtn} onClick={() => setModalConfig(true)}>⚙ Prioridades</button>
                 <button className={styles.solicitantesBtn} onClick={() => setModalSolicitantes(true)}>👥 Solicitantes</button>
-                <button className={styles.exportBtn} onClick={() => setModalExport(true)}>📊 Exportar a Sheets</button>
+                <a
+                    href="https://docs.google.com/spreadsheets/d/1RbfhsLHWqqWGKsqV0d7-PQUAedDOVfs9QwfK9nPV-X0/edit"
+                    target="_blank"
+                    rel="noreferrer"
+                    className={styles.exportBtn}
+                >📊 Exportar masivos</a>
             </div>
 
             {/* Stats */}
@@ -638,13 +641,6 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                 </div>
             </Modal>
 
-            {/* Export modal */}
-            <ExportModal
-                show={modalExport}
-                onClose={() => setModalExport(false)}
-                solicitudes={solicitudes}
-                title="EXPORTAR A SHEETS"
-            />
 
             {/* Lista de todos los solicitantes */}
             <SolicitantesListModal
