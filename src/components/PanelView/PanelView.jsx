@@ -31,6 +31,7 @@ const SORT_DEFAULT_DIR = {
     seccion:      'asc',
     peticion:     'asc',
     descripcion:  'asc',
+    homologado:   'desc',
     empresa:      'asc',
     pvpRec:       'desc',
     pvpMercadona: 'desc',
@@ -45,6 +46,7 @@ function sortVal(s, col) {
         case 'seccion':      return s.seccion || ''
         case 'peticion':     return s.peticion || ''
         case 'descripcion':  return s.smsDescripcion || ''
+        case 'homologado':   return s.homologado || ''
         case 'empresa':      return s.empresa || ''
         case 'pvpRec':       return parseFloat(s.pvpRec) || 0
         case 'pvpMercadona': return parseFloat(s.pvpMercadona) || 0
@@ -87,6 +89,15 @@ function DetailGrid({ s }) {
                     <DLabel label={label} /><DVal val={val} />
                 </div>
             ))}
+            {s.homologado && (
+                <div className={styles.detailItem} style={{ gridColumn: '1/-1' }}>
+                    <DLabel label="Homologación" />
+                    {s.homologado === 'Sí'
+                        ? <DVal val={`✓ Homologado — encontrado en: ${(s.homologadoFuentes || []).join(', ') || '—'}`} />
+                        : <DVal val="✗ No homologado en la fecha de la solicitud" />
+                    }
+                </div>
+            )}
             {s.comentarios && (
                 <div className={styles.detailItem} style={{ gridColumn: '1/-1' }}>
                     <DLabel label="Comentarios" /><DVal val={s.comentarios} />
@@ -188,7 +199,7 @@ function RespForm({ form, onChange, modalResp, bulkMode, selectedCount }) {
 
 /* ══════════════════════════════════════════ */
 
-export default function PanelView({ solicitudes, updateSolicitud, showToast, currentUser, prioridades, updatePrioridad, resetDefaults, isHomologado }) {
+export default function PanelView({ solicitudes, updateSolicitud, showToast, currentUser, prioridades, updatePrioridad, resetDefaults }) {
     const [modalMover,         setModalMover]         = useState(null)
     const [modalResp,          setModalResp]          = useState(null)   // null | solicitud | 'bulk'
     const [modalVer,           setModalVer]           = useState(null)
@@ -197,8 +208,8 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
     const [modalSolicitantes,  setModalSolicitantes]  = useState(false)
     const [bulkMode,           setBulkMode]           = useState(false)
 
-    const [filtroEstado,  setFiltroEstado]  = useState('todos')
-    const [filtroSeccion, setFiltroSeccion] = useState('todas')
+    const [filtroEstado,     setFiltroEstado]     = useState('todos')
+    const [filtroSeccion,    setFiltroSeccion]    = useState('todas')
     const [busqueda,      setBusqueda]      = useState('')
     const [sortState,     setSortState]     = useState({ col: 'fecha', dir: 'desc' })
 
@@ -237,9 +248,9 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
         enviar: 'NO',
     })
 
-    const recibidos   = solicitudes.filter(s => s.estado === 'recibido')
-    const enSeccion   = solicitudes.filter(s => s.estado === 'seccion')
-    const respondidos = solicitudes.filter(s => s.estado === 'respondido')
+    const recibidos     = solicitudes.filter(s => s.estado === 'recibido')
+    const enSeccion     = solicitudes.filter(s => s.estado === 'seccion')
+    const respondidos   = solicitudes.filter(s => s.estado === 'respondido')
 
     const filtered = useMemo(() => solicitudes
         .filter(s => filtroEstado === 'todos' || s.estado === filtroEstado)
@@ -481,6 +492,7 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                                     { col: 'seccion',      label: 'Sección' },
                                     { col: 'peticion',     label: 'Petición' },
                                     { col: 'descripcion',  label: 'Descripción' },
+                                    { col: 'homologado',   label: 'Homologado' },
                                     { col: 'empresa',      label: 'Empresa · Tienda' },
                                     { col: 'pvpRec',       label: 'CRF Rec.' },
                                     { col: 'pvpMercadona', label: 'Mcdna' },
@@ -530,10 +542,16 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                                         <td className={styles.tdDate}>{s.timestamp}</td>
                                         <td><span className={`${styles.secBadge} ${secClass}`}>{s.seccion}</span></td>
                                         <td className={styles.tdPeticion}>{s.peticion}</td>
-                                        <td className={styles.tdDesc}>
-                                            {s.smsDescripcion || '—'}
-                                            {s.smsDescripcion && isHomologado?.(s.smsDescripcion, s.fecha) && (
-                                                <span className={styles.badgeHom} title="Homologado">✓ HOM</span>
+                                        <td className={styles.tdDesc}>{s.smsDescripcion || '—'}</td>
+                                        <td>
+                                            {s.homologado === 'Sí' ? (
+                                                <span className={`${styles.homBadge} ${styles.homBadgeSi}`} title={`Homologado en: ${(s.homologadoFuentes || []).join(', ') || '—'}`}>
+                                                    ✓ Sí
+                                                </span>
+                                            ) : s.homologado === 'No' ? (
+                                                <span className={`${styles.homBadge} ${styles.homBadgeNo}`}>✗ No</span>
+                                            ) : (
+                                                <span className={`${styles.homBadge} ${styles.homBadgeUnk}`}>—</span>
                                             )}
                                         </td>
                                         <td className={styles.tdEmpresa}>{s.empresa}{s.codtienda ? ` · ${s.codtienda}` : ''}</td>

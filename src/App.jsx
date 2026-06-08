@@ -27,7 +27,7 @@ export default function App() {
   const { toast, showToast } = useToast()
   const { prioridades, loading: loadingPrio, getPrioridad, updatePrioridad, resetDefaults } = usePrioridades()
   const { admins, fields, loading: loadingCfg, addAdmin, removeAdmin, updateField, resetFields } = useConfig()
-  const { records: homologaciones, columnMap: homoColumnMap, saveFromExcel, clearAll: clearHomologaciones, isHomologado } = useHomologacion()
+  const { fuentes: homologaciones, saveFuente: saveHomologacionFuente, clearFuente: clearHomologacionFuente, isHomologado } = useHomologacion()
   const [view, setView] = useState('form')
   const [modalExport, setModalExport] = useState(false)
 
@@ -106,16 +106,14 @@ export default function App() {
           prioridades={prioridades}
           updatePrioridad={updatePrioridad}
           resetDefaults={resetDefaults}
-          isHomologado={isHomologado}
         />
       )}
 
       {isAdmin && view === 'homologacion' && (
         <HomologacionView
-          records={homologaciones}
-          columnMap={homoColumnMap}
-          saveFromExcel={saveFromExcel}
-          clearAll={clearHomologaciones}
+          fuentes={homologaciones}
+          saveFuente={saveHomologacionFuente}
+          clearFuente={clearHomologacionFuente}
         />
       )}
 

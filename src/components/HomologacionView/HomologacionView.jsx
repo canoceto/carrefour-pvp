@@ -1,21 +1,22 @@
 import React, { useState, useMemo, useRef } from 'react'
 import styles from './HomologacionView.module.css'
-import { parseExcelFile } from '../../hooks/useHomologacion'
+import { parseExcelFile, FUENTES_HOMOLOGACION } from '../../hooks/useHomologacion'
 
 const today = () => new Date().toISOString().split('T')[0]
 
-function UploadModal({ show, onClose, onConfirm }) {
-    const [step,    setStep]    = useState('idle')  // idle | mapping | loading
-    const [headers, setHeaders] = useState([])
-    const [rows,    setRows]    = useState([])
-    const [smsCol,  setSmsCol]  = useState('')
-    const [fechaCol,setFechaCol]= useState('')
-    const [error,   setError]   = useState('')
+function UploadModal({ show, fuenteMeta, onClose, onConfirm }) {
+    const [step,     setStep]     = useState('idle')  // idle | mapping | loading
+    const [headers,  setHeaders]  = useState([])
+    const [rows,     setRows]     = useState([])
+    const [smsCol,   setSmsCol]   = useState('')
+    const [fecha,    setFecha]    = useState(today())
+    const [fileName, setFileName] = useState('')
+    const [error,    setError]    = useState('')
     const fileRef = useRef()
 
     const reset = () => {
         setStep('idle'); setHeaders([]); setRows([])
-        setSmsCol(''); setFechaCol(''); setError('')
+        setSmsCol(''); setFecha(today()); setFileName(''); setError('')
     }
 
     const handleFile = async (e) => {
@@ -27,11 +28,10 @@ function UploadModal({ show, onClose, onConfirm }) {
             if (h.length === 0) { setError('El archivo está vacío o no tiene encabezados.'); return }
             setHeaders(h)
             setRows(r)
-            // Auto-detectar columnas por nombre
-            const autoSms   = h.find(c => /sms|codigo|código|descripci/i.test(c)) || ''
-            const autoFecha = h.find(c => /fecha|date|dia|día/i.test(c))           || ''
+            setFileName(file.name)
+            // Auto-detectar columna del código SMS por nombre
+            const autoSms = h.find(c => /^sms$/i.test(c)) || h.find(c => /sms|codigo|código/i.test(c)) || ''
             setSmsCol(autoSms)
-            setFechaCol(autoFecha)
             setStep('mapping')
         } catch (err) {
             setError('No se pudo leer el archivo: ' + err.message)
@@ -40,11 +40,11 @@ function UploadModal({ show, onClose, onConfirm }) {
     }
 
     const handleConfirm = async () => {
-        if (!smsCol || !fechaCol) { setError('Debes seleccionar ambas columnas.'); return }
-        if (smsCol === fechaCol)  { setError('Las columnas deben ser diferentes.'); return }
+        if (!smsCol) { setError('Debes seleccionar la columna del código SMS.'); return }
+        if (!fecha)  { setError('Debes indicar la fecha que representa esta carga.'); return }
         setStep('loading')
         try {
-            await onConfirm(rows, headers, { smsCol, fechaCol })
+            await onConfirm(rows, headers, { smsCol, fecha, fileName })
             reset()
             onClose()
         } catch (err) {
@@ -59,7 +59,7 @@ function UploadModal({ show, onClose, onConfirm }) {
         <div className={styles.overlay} onClick={onClose}>
             <div className={styles.modal} onClick={e => e.stopPropagation()}>
                 <div className={styles.modalHeader}>
-                    <span>SUBIR EXCEL DE HOMOLOGACIÓN</span>
+                    <span>SUBIR EXCEL · {fuenteMeta?.nombre?.toUpperCase()}</span>
                     <button className={styles.modalClose} onClick={() => { reset(); onClose() }}>✕</button>
                 </div>
 
@@ -78,23 +78,28 @@ function UploadModal({ show, onClose, onConfirm }) {
                 {step === 'mapping' && (
                     <div className={styles.modalBody}>
                         <div className={styles.mappingInfo}>
-                            Archivo cargado: <strong>{rows.length} filas</strong> · <strong>{headers.length} columnas</strong>
+                            Archivo cargado: <strong>{fileName}</strong> · <strong>{rows.length} filas</strong> · <strong>{headers.length} columnas</strong>
                         </div>
                         <div className={styles.mappingGrid}>
                             <div className={styles.mappingField}>
-                                <label className={styles.mappingLabel}>Columna SMS / Código producto</label>
+                                <label className={styles.mappingLabel}>Columna del código SMS</label>
                                 <select className={styles.mappingSelect} value={smsCol} onChange={e => setSmsCol(e.target.value)}>
                                     <option value="">— seleccionar —</option>
                                     {headers.map(h => <option key={h} value={h}>{h}</option>)}
                                 </select>
                             </div>
                             <div className={styles.mappingField}>
-                                <label className={styles.mappingLabel}>Columna Fecha homologación</label>
-                                <select className={styles.mappingSelect} value={fechaCol} onChange={e => setFechaCol(e.target.value)}>
-                                    <option value="">— seleccionar —</option>
-                                    {headers.map(h => <option key={h} value={h}>{h}</option>)}
-                                </select>
+                                <label className={styles.mappingLabel}>Fecha que representa esta carga</label>
+                                <input
+                                    type="date"
+                                    className={styles.mappingSelect}
+                                    value={fecha}
+                                    onChange={e => setFecha(e.target.value)}
+                                />
                             </div>
+                        </div>
+                        <div className={styles.mappingNote}>
+                            Esta fecha es el "día" de esta fuente: las solicitudes creadas ese mismo día se compararán contra estos registros.
                         </div>
 
                         {/* Preview */}
@@ -104,17 +109,16 @@ function UploadModal({ show, onClose, onConfirm }) {
                                 <table className={styles.previewTable}>
                                     <thead>
                                         <tr>{headers.map(h => (
-                                            <th key={h} className={`${styles.previewTh} ${h === smsCol ? styles.previewColSms : h === fechaCol ? styles.previewColFecha : ''}`}>
+                                            <th key={h} className={`${styles.previewTh} ${h === smsCol ? styles.previewColSms : ''}`}>
                                                 {h}
-                                                {h === smsCol   && <span className={styles.previewTag}>SMS</span>}
-                                                {h === fechaCol && <span className={styles.previewTagFecha}>Fecha</span>}
+                                                {h === smsCol && <span className={styles.previewTag}>SMS</span>}
                                             </th>
                                         ))}</tr>
                                     </thead>
                                     <tbody>
                                         {rows.slice(0, 5).map((row, i) => (
                                             <tr key={i}>{headers.map((h, idx) => (
-                                                <td key={h} className={`${styles.previewTd} ${h === smsCol ? styles.previewColSms : h === fechaCol ? styles.previewColFecha : ''}`}>
+                                                <td key={h} className={`${styles.previewTd} ${h === smsCol ? styles.previewColSms : ''}`}>
                                                     {row[idx] ?? ''}
                                                 </td>
                                             ))}</tr>
@@ -127,8 +131,8 @@ function UploadModal({ show, onClose, onConfirm }) {
                         {error && <div className={styles.uploadError}>{error}</div>}
                         <div className={styles.modalFooter}>
                             <button className={styles.btnCancel} onClick={() => { reset(); onClose() }}>Cancelar</button>
-                            <button className={styles.btnConfirm} onClick={handleConfirm} disabled={!smsCol || !fechaCol}>
-                                ✓ Importar {rows.length} registros
+                            <button className={styles.btnConfirm} onClick={handleConfirm} disabled={!smsCol || !fecha}>
+                                ✓ Guardar {rows.length} registros
                             </button>
                         </div>
                     </div>
@@ -144,154 +148,226 @@ function UploadModal({ show, onClose, onConfirm }) {
     )
 }
 
-export default function HomologacionView({ records, columnMap, saveFromExcel, clearAll }) {
-    const [showUpload,  setShowUpload]  = useState(false)
-    const [filterFecha, setFilterFecha] = useState(today())
-    const [busqueda,    setBusqueda]    = useState('')
+function SourceTable({ fuente }) {
+    const [busqueda, setBusqueda] = useState('')
 
-    const smsCol   = columnMap?.smsCol
-    const fechaCol = columnMap?.fechaCol
+    const cols = useMemo(() => {
+        if (!fuente?.records?.length) return []
+        const first = fuente.records[0]
+        const rest = Object.keys(first).filter(k => k !== '_rowIndex' && k !== fuente.smsCol)
+        return [fuente.smsCol, ...rest]
+    }, [fuente])
 
     const filtered = useMemo(() => {
-        if (!records.length || !smsCol) return []
-        return records.filter(r => {
-            const fechaMatch  = !filterFecha || String(r[fechaCol] ?? '') === filterFecha
-            const searchMatch = !busqueda    || Object.values(r).some(v =>
-                String(v).toLowerCase().includes(busqueda.toLowerCase())
-            )
-            return fechaMatch && searchMatch
-        })
-    }, [records, smsCol, fechaCol, filterFecha, busqueda])
+        if (!fuente?.records?.length) return []
+        if (!busqueda) return fuente.records
+        const q = busqueda.toLowerCase()
+        return fuente.records.filter(r => Object.values(r).some(v => String(v).toLowerCase().includes(q)))
+    }, [fuente, busqueda])
 
-    const totalHoy = useMemo(() => {
-        const t = today()
-        if (!records.length || !fechaCol) return 0
-        return records.filter(r => String(r[fechaCol] ?? '') === t).length
-    }, [records, fechaCol])
+    if (!fuente?.records?.length) return null
 
-    const otherCols = columnMap
-        ? Object.keys(records[0] || {}).filter(k => k !== '_rowIndex' && k !== smsCol && k !== fechaCol)
-        : []
+    const LIMIT = 200
+    const visible = filtered.slice(0, LIMIT)
+
+    return (
+        <div className={styles.sourceTableArea}>
+            <div className={styles.searchBox} style={{ maxWidth: 320 }}>
+                <span className={styles.searchIcon}>🔍</span>
+                <input
+                    type="text"
+                    className={styles.searchInput}
+                    placeholder="Buscar en todos los campos…"
+                    value={busqueda}
+                    onChange={e => setBusqueda(e.target.value)}
+                />
+                {busqueda && <button className={styles.searchClear} onClick={() => setBusqueda('')}>✕</button>}
+            </div>
+            <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                    <thead>
+                        <tr>{cols.map(c => (
+                            <th key={c} className={`${styles.th} ${c === fuente.smsCol ? styles.previewColSms : ''}`}>
+                                {c}{c === fuente.smsCol && <span className={styles.previewTag}>SMS</span>}
+                            </th>
+                        ))}</tr>
+                    </thead>
+                    <tbody>
+                        {visible.length === 0 ? (
+                            <tr><td colSpan={cols.length} className={styles.emptyRow}>Sin registros con esta búsqueda</td></tr>
+                        ) : visible.map((r, i) => (
+                            <tr key={i} className={styles.tableRow}>
+                                {cols.map(c => <td key={c} className={c === fuente.smsCol ? styles.tdSms : styles.tdOther}>{r[c] ?? '—'}</td>)}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+                <div className={styles.tableFooter}>
+                    {visible.length} de {filtered.length} registros{filtered.length > LIMIT ? ' (mostrando los primeros ' + LIMIT + ')' : ''}
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function SourceCard({ meta, fuente, onUpload, onClear }) {
+    const [expanded, setExpanded] = useState(false)
+    const cargada = !!fuente
+    const esHoy = cargada && fuente.fecha === today()
+
+    return (
+        <div className={styles.sourceCard}>
+            <div className={styles.sourceCardHeader}>
+                <div>
+                    <div className={styles.sourceName}>{meta.nombre}</div>
+                    <div className={styles.sourceHint}>{meta.hint}</div>
+                </div>
+                {cargada
+                    ? <span className={`${styles.sourceBadge} ${esHoy ? styles.sourceBadgeHoy : styles.sourceBadgeOld}`}>
+                        {esHoy ? '✓ Vigente hoy' : '⏳ Otro día'}
+                      </span>
+                    : <span className={styles.sourceBadgeEmpty}>Sin datos</span>
+                }
+            </div>
+
+            {cargada ? (
+                <div className={styles.sourceMeta}>
+                    <div className={styles.sourceMetaItem}>
+                        <span className={styles.sourceMetaLabel}>Fecha de la carga</span>
+                        <span className={styles.sourceMetaVal}>{fuente.fecha || '—'}</span>
+                    </div>
+                    <div className={styles.sourceMetaItem}>
+                        <span className={styles.sourceMetaLabel}>Registros</span>
+                        <span className={styles.sourceMetaVal}>{fuente.records.length}</span>
+                    </div>
+                    <div className={styles.sourceMetaItem}>
+                        <span className={styles.sourceMetaLabel}>Columna SMS</span>
+                        <span className={styles.sourceMetaVal}>{fuente.smsCol}</span>
+                    </div>
+                    <div className={styles.sourceMetaItem}>
+                        <span className={styles.sourceMetaLabel}>Fichero</span>
+                        <span className={styles.sourceMetaVal} title={fuente.fileName}>{fuente.fileName || '—'}</span>
+                    </div>
+                </div>
+            ) : (
+                <div className={styles.sourceEmptyMsg}>
+                    Sube el Excel diario de esta fuente para incluirla en la comprobación de homologación.
+                </div>
+            )}
+
+            <div className={styles.sourceActions}>
+                <button className={styles.uploadBtn} onClick={onUpload}>
+                    📂 {cargada ? 'Reemplazar Excel' : 'Subir Excel'}
+                </button>
+                {cargada && (
+                    <>
+                        <button className={styles.btnCancel} onClick={() => setExpanded(e => !e)}>
+                            {expanded ? '▲ Ocultar registros' : '▼ Ver registros'}
+                        </button>
+                        <button className={styles.clearBtn} onClick={onClear}>🗑 Limpiar</button>
+                    </>
+                )}
+            </div>
+
+            {expanded && <SourceTable fuente={fuente} />}
+        </div>
+    )
+}
+
+function fuenteEstado(fuente) {
+    if (!fuente) return 'vacia'
+    return fuente.fecha === today() ? 'hoy' : 'otro'
+}
+
+const ESTADO_ICONO = { vacia: '○', otro: '⏳', hoy: '✓' }
+
+export default function HomologacionView({ fuentes, saveFuente, clearFuente }) {
+    const [uploadFor, setUploadFor] = useState(null)  // fuenteId | null
+    const [activeTab, setActiveTab] = useState(FUENTES_HOMOLOGACION[0].id)
+
+    const totalRegistros = useMemo(
+        () => Object.values(fuentes).reduce((acc, f) => acc + (f?.records?.length || 0), 0),
+        [fuentes]
+    )
+    const vigentesHoy = useMemo(
+        () => Object.values(fuentes).filter(f => f && f.fecha === today()).length,
+        [fuentes]
+    )
+
+    const uploadMeta = FUENTES_HOMOLOGACION.find(f => f.id === uploadFor)
 
     return (
         <div className={styles.wrap}>
             <div className={styles.header}>
                 <div className={styles.title}>HOMOLOGACIÓN</div>
-                <div className={styles.headerActions}>
-                    <button className={styles.uploadBtn} onClick={() => setShowUpload(true)}>
-                        📂 Subir Excel
-                    </button>
-                    {records.length > 0 && (
-                        <button className={styles.clearBtn} onClick={() => { if (window.confirm('¿Eliminar todos los registros de homologación?')) clearAll() }}>
-                            🗑 Limpiar todo
-                        </button>
-                    )}
-                </div>
+            </div>
+
+            <div className={styles.intro}>
+                Sube cada día el Excel de cada una de estas fuentes. Cuando se registre una nueva solicitud, la
+                aplicación buscará automáticamente su código SMS en las fuentes cuya <strong>fecha de carga coincida
+                con la fecha de la solicitud</strong>, marcará si está homologado o no y guardará en qué fuente(s) se encontró.
             </div>
 
             {/* Stats */}
             <div className={styles.stats}>
                 <div className={styles.statCard}>
-                    <div className={styles.statLabel}>Total registros</div>
-                    <div className={styles.statValue}>{records.length}</div>
-                </div>
-                <div className={styles.statCard}>
-                    <div className={styles.statLabel}>Homologados hoy</div>
-                    <div className={`${styles.statValue} ${styles.statGreen}`}>{totalHoy}</div>
-                </div>
-                <div className={styles.statCard}>
-                    <div className={styles.statLabel}>Fecha filtrada</div>
-                    <div className={styles.statValue}>{filterFecha || '—'}</div>
-                </div>
-                {columnMap && (
-                    <div className={styles.statCard}>
-                        <div className={styles.statLabel}>Columna SMS</div>
-                        <div className={styles.statValueSm}>{smsCol}</div>
+                    <div className={styles.statLabel}>Fuentes vigentes hoy</div>
+                    <div className={`${styles.statValue} ${vigentesHoy === FUENTES_HOMOLOGACION.length ? styles.statGreen : ''}`}>
+                        {vigentesHoy} / {FUENTES_HOMOLOGACION.length}
                     </div>
-                )}
-            </div>
-
-            {/* Filtros */}
-            <div className={styles.filterBar}>
-                <div className={styles.filterGroup}>
-                    <label className={styles.filterLabel}>Fecha</label>
-                    <input
-                        type="date"
-                        className={styles.filterDate}
-                        value={filterFecha}
-                        onChange={e => setFilterFecha(e.target.value)}
-                    />
-                    {filterFecha && (
-                        <button className={styles.filterClear} onClick={() => setFilterFecha('')}>✕</button>
-                    )}
                 </div>
-                <div className={styles.searchBox}>
-                    <span className={styles.searchIcon}>🔍</span>
-                    <input
-                        type="text"
-                        className={styles.searchInput}
-                        placeholder="Buscar en todos los campos…"
-                        value={busqueda}
-                        onChange={e => setBusqueda(e.target.value)}
-                    />
-                    {busqueda && <button className={styles.searchClear} onClick={() => setBusqueda('')}>✕</button>}
+                <div className={styles.statCard}>
+                    <div className={styles.statLabel}>Total registros cargados</div>
+                    <div className={styles.statValue}>{totalRegistros}</div>
+                </div>
+                <div className={styles.statCard}>
+                    <div className={styles.statLabel}>Fecha de hoy</div>
+                    <div className={styles.statValue}>{today()}</div>
                 </div>
             </div>
 
-            {/* Tabla */}
-            {records.length === 0 ? (
-                <div className={styles.empty}>
-                    <div className={styles.emptyIcon}>📋</div>
-                    <div className={styles.emptyTitle}>Sin datos de homologación</div>
-                    <div className={styles.emptySub}>Sube un Excel diariamente para cargar los registros</div>
-                    <button className={styles.uploadBtnLg} onClick={() => setShowUpload(true)}>📂 Subir Excel</button>
-                </div>
-            ) : (
-                <div className={styles.tableWrap}>
-                    <table className={styles.table}>
-                        <thead>
-                            <tr>
-                                <th className={styles.th}>{smsCol || 'SMS'}</th>
-                                <th className={styles.th}>{fechaCol || 'Fecha'}</th>
-                                {otherCols.map(c => <th key={c} className={styles.th}>{c}</th>)}
-                                <th className={styles.th}>Estado</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filtered.length === 0 ? (
-                                <tr>
-                                    <td colSpan={3 + otherCols.length} className={styles.emptyRow}>
-                                        Sin registros con estos filtros
-                                    </td>
-                                </tr>
-                            ) : filtered.map((r, i) => {
-                                const esHoy = String(r[fechaCol] ?? '') === today()
-                                return (
-                                    <tr key={i} className={`${styles.tableRow} ${esHoy ? styles.rowHoy : ''}`}>
-                                        <td className={styles.tdSms}>{r[smsCol] ?? '—'}</td>
-                                        <td className={styles.tdFecha}>{r[fechaCol] ?? '—'}</td>
-                                        {otherCols.map(c => <td key={c} className={styles.tdOther}>{r[c] ?? '—'}</td>)}
-                                        <td>
-                                            {esHoy
-                                                ? <span className={styles.badgeHom}>✓ Homologado</span>
-                                                : <span className={styles.badgeOld}>Otro día</span>
-                                            }
-                                        </td>
-                                    </tr>
-                                )
-                            })}
-                        </tbody>
-                    </table>
-                    <div className={styles.tableFooter}>
-                        {filtered.length} de {records.length} registros
-                    </div>
-                </div>
-            )}
+            {/* Tabs de fuentes */}
+            <div className={styles.sourceTabsRow}>
+                {FUENTES_HOMOLOGACION.map(meta => {
+                    const estado = fuenteEstado(fuentes[meta.id])
+                    return (
+                        <button
+                            key={meta.id}
+                            className={`${styles.sourceTab} ${activeTab === meta.id ? styles.sourceTabActive : ''}`}
+                            onClick={() => setActiveTab(meta.id)}
+                        >
+                            <span className={`${styles.sourceTabIcon} ${styles['sourceTabIcon_' + estado]}`}>{ESTADO_ICONO[estado]}</span>
+                            {meta.nombre}
+                            {fuentes[meta.id] && (
+                                <span className={`${styles.sourceTabCount} ${activeTab === meta.id ? styles.sourceTabCountActive : ''}`}>
+                                    {fuentes[meta.id].records.length}
+                                </span>
+                            )}
+                        </button>
+                    )
+                })}
+            </div>
+
+            {(() => {
+                const meta = FUENTES_HOMOLOGACION.find(f => f.id === activeTab)
+                return (
+                    <SourceCard
+                        key={meta.id}
+                        meta={meta}
+                        fuente={fuentes[meta.id]}
+                        onUpload={() => setUploadFor(meta.id)}
+                        onClear={() => {
+                            if (window.confirm(`¿Eliminar los registros cargados de "${meta.nombre}"?`)) clearFuente(meta.id)
+                        }}
+                    />
+                )
+            })()}
 
             <UploadModal
-                show={showUpload}
-                onClose={() => setShowUpload(false)}
-                onConfirm={saveFromExcel}
+                show={!!uploadFor}
+                fuenteMeta={uploadMeta}
+                onClose={() => setUploadFor(null)}
+                onConfirm={(rows, headers, map) => saveFuente(uploadFor, rows, headers, map)}
             />
         </div>
     )

@@ -15,6 +15,8 @@ const CAMPOS = [
     { key: 'codtienda',               label: 'Cód. Tienda',           group: 'Solicitud',      def: true  },
     { key: 'prioridad',               label: 'Prioridad',             group: 'Solicitud',      def: true  },
     { key: 'smsDescripcion',          label: 'SMS / Descripción',     group: 'Producto',       def: true  },
+    { key: 'homologado',              label: 'Homologado',            group: 'Producto',       def: false },
+    { key: 'homologadoFuentes',       label: 'Homologado en (fuentes)', group: 'Producto',     def: false },
     { key: 'planSevilla',             label: 'Plan Sevilla',          group: 'Producto',       def: false },
     { key: 'etiquetadoProveedor',     label: 'Etiq. Proveedor',      group: 'Producto',       def: false },
     { key: 'fechaVigor',              label: 'Fecha Vigor',           group: 'Producto',       def: false },

@@ -14,7 +14,7 @@ const BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 export const isApiMode = () => BASE_URL !== ''
 
 function buildHeaders(extra = {}) {
-    const h = { 'Content-Type': 'application/json', ...extra }
+    const h = {'Content-Type': 'application/json', ...extra}
 
     const token = sessionStorage.getItem('crfpvp_token')
     if (token) {
@@ -23,7 +23,8 @@ function buildHeaders(extra = {}) {
         try {
             const u = JSON.parse(sessionStorage.getItem('crfpvp_user') || 'null')
             if (u?.email) h['X-User-Email'] = u.email
-        } catch {}
+        } catch {
+        }
     }
 
     return h
@@ -32,13 +33,13 @@ function buildHeaders(extra = {}) {
 export class ApiError extends Error {
     constructor(message, status) {
         super(message)
-        this.name  = 'ApiError'
+        this.name = 'ApiError'
         this.status = status
     }
 }
 
 export async function apiFetch(method, path, body) {
-    const opts = { method, headers: buildHeaders() }
+    const opts = {method, headers: buildHeaders()}
     if (body !== undefined) opts.body = JSON.stringify(body)
 
     let res
@@ -50,7 +51,11 @@ export async function apiFetch(method, path, body) {
 
     if (!res.ok) {
         let msg = `Error ${res.status}`
-        try { const j = await res.json(); msg = j.message || j.error || msg } catch {}
+        try {
+            const j = await res.json();
+            msg = j.message || j.error || msg
+        } catch {
+        }
         throw new ApiError(msg, res.status)
     }
 
@@ -60,5 +65,5 @@ export async function apiFetch(method, path, body) {
 /** Guarda el JWT que devuelva el backend al autenticar */
 export function setAuthToken(token) {
     if (token) sessionStorage.setItem('crfpvp_token', token)
-    else        sessionStorage.removeItem('crfpvp_token')
+    else sessionStorage.removeItem('crfpvp_token')
 }

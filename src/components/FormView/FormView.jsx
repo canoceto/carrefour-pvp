@@ -75,6 +75,11 @@ export default function FormView({ user, onSubmit, showToast, getPrioridad, fiel
     setProgress(Math.round((filled / total) * 100))
   }, [form, reqFields, reqRadios])
 
+  const homCheck = useMemo(() => {
+    if (!form.smsDescripcion || !isHomologado) return null
+    return isHomologado(form.smsDescripcion, form.fecha)
+  }, [form.smsDescripcion, form.fecha, isHomologado])
+
   const set = (key) => (e) => {
     setForm(f => ({ ...f, [key]: e.target.value }))
     if (errors[key]) setErrors(er => ({ ...er, [key]: false }))
@@ -96,10 +101,14 @@ export default function FormView({ user, onSubmit, showToast, getPrioridad, fiel
       return
     }
 
+    const homResult = isHomologado ? isHomologado(form.smsDescripcion, form.fecha) : { homologado: false, fuentes: [] }
+
     onSubmit({
       id: 'SOL-' + Date.now(),
       timestamp: new Date().toLocaleString('es-ES'),
       ...form,
+      homologado: homResult.homologado ? 'Sí' : 'No',
+      homologadoFuentes: homResult.fuentes.map(f => f.nombre),
       estado: 'recibido',
       prioridad: getPrioridad ? getPrioridad(form.peticion) : 5,
       nuevoResponsable: '',
@@ -204,9 +213,9 @@ export default function FormView({ user, onSubmit, showToast, getPrioridad, fiel
           {show('smsDescripcion') && (
             <Field label={lbl('smsDescripcion')} req={req('smsDescripcion')}>
               <input type="text" value={form.smsDescripcion} onChange={set('smsDescripcion')} placeholder="Ej: 867504 o COSTILLA SEMICARNUDA CRF" className={ic('smsDescripcion')} />
-              {form.smsDescripcion && isHomologado && (
-                isHomologado(form.smsDescripcion, form.fecha)
-                  ? <div className={styles.homBadgeOk}>✓ Homologado hoy</div>
+              {form.smsDescripcion && homCheck && (
+                homCheck.homologado
+                  ? <div className={styles.homBadgeOk}>✓ Homologado hoy · {homCheck.fuentes.map(f => f.nombre).join(', ')}</div>
                   : <div className={styles.homBadgeNo}>✗ No homologado hoy</div>
               )}
             </Field>

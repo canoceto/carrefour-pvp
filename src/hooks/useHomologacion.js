@@ -2,6 +2,17 @@ import { useState, useEffect, useCallback } from 'react'
 import * as XLSX from 'xlsx'
 import { homologacionService } from '../services'
 
+/**
+ * Fuentes de homologación admitidas. Cada una se sube y guarda de forma
+ * independiente: tiene su propio fichero, fecha de carga (el día que
+ * representa esos datos) y columna de código SMS.
+ */
+export const FUENTES_HOMOLOGACION = [
+    { id: 'homologos_drive',      nombre: 'Homólogos Drive',      hint: 'Maestro de homólogos y coeficientes (hoja ARTÍCULOS)' },
+    { id: 'homologacion_inversa', nombre: 'Homologación Inversa', hint: 'SMS homologados / sin match frente a la competencia' },
+    { id: 'sms_dashboard',        nombre: 'SMS Dashboard',        hint: 'Panel de SMS creados / actualizados' },
+]
+
 /** Normaliza fechas de Excel a "YYYY-MM-DD" */
 function normalizeDate(value) {
     if (!value && value !== 0) return ''
@@ -20,11 +31,6 @@ function normalizeDate(value) {
     // DD/MM/YYYY
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
         const [d, m, y] = s.split('/')
-        return `${y}-${m}-${d}`
-    }
-    // MM/DD/YYYY
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
-        const [m, d, y] = s.split('/')
         return `${y}-${m}-${d}`
     }
     // Intentar con Date nativo
@@ -56,57 +62,67 @@ export function parseExcelFile(file) {
 }
 
 export function useHomologacion() {
-    const [records,   setRecords]   = useState([])
-    const [columnMap, setColumnMap] = useState(null)  // { smsCol, fechaCol }
-    const [loading,   setLoading]   = useState(true)
-    const [error,     setError]     = useState(null)
+    const [fuentes, setFuentes] = useState({})  // { [fuenteId]: { nombre, fileName, fecha, smsCol, records, updatedAt } }
+    const [loading, setLoading] = useState(true)
+    const [error,   setError]   = useState(null)
 
     useEffect(() => {
         homologacionService.getAll()
-            .then(data => {
-                setRecords(data.records || [])
-                setColumnMap(data.columnMap || null)
-                setLoading(false)
-            })
+            .then(data => { setFuentes(data || {}); setLoading(false) })
             .catch(err => { setError(err.message); setLoading(false) })
     }, [])
 
-    /** Guarda registros normalizados tras el mapeo de columnas */
-    const saveFromExcel = useCallback(async (rawRows, headers, map) => {
-        const { smsCol, fechaCol } = map
-        const smsIdx   = headers.indexOf(smsCol)
-        const fechaIdx = headers.indexOf(fechaCol)
+    /** Guarda (o reemplaza) los registros de una fuente concreta tras el mapeo de columnas */
+    const saveFuente = useCallback(async (fuenteId, rawRows, headers, map) => {
+        const { smsCol, fecha, fileName } = map
+        const smsIdx = headers.indexOf(smsCol)
 
-        const normalized = rawRows.map((row, i) => {
+        const records = rawRows.map((row, i) => {
             const record = { _rowIndex: i }
             headers.forEach((h, idx) => { record[h] = row[idx] ?? '' })
-            // Normalizar fecha
-            record[fechaCol] = normalizeDate(row[fechaIdx])
             return record
-        }).filter(r => r[smsCol] !== '' && r[fechaCol] !== '')
+        }).filter(r => String(r[smsCol] ?? '').trim() !== '')
 
-        const result = await homologacionService.saveAll(normalized, map)
-        setRecords(result.records)
-        setColumnMap(result.columnMap)
-        return result
+        const meta = FUENTES_HOMOLOGACION.find(f => f.id === fuenteId)
+        const fuente = {
+            nombre: meta?.nombre ?? fuenteId,
+            fileName: fileName ?? '',
+            fecha: normalizeDate(fecha),
+            smsCol,
+            records,
+            updatedAt: new Date().toISOString(),
+        }
+
+        const saved = await homologacionService.saveFuente(fuenteId, fuente)
+        setFuentes(prev => ({ ...prev, [fuenteId]: saved }))
+        return saved
     }, [])
 
-    const clearAll = useCallback(async () => {
-        await homologacionService.clearAll()
-        setRecords([])
-        setColumnMap(null)
+    const clearFuente = useCallback(async (fuenteId) => {
+        await homologacionService.clearFuente(fuenteId)
+        setFuentes(prev => {
+            const next = { ...prev }
+            delete next[fuenteId]
+            return next
+        })
     }, [])
 
-    /** Comprueba si un SMS está homologado en una fecha dada ("YYYY-MM-DD") */
+    /**
+     * Comprueba si un SMS está homologado para una fecha dada ("YYYY-MM-DD"),
+     * buscando en todas las fuentes cuya fecha de carga coincida con esa fecha.
+     * Devuelve { homologado, fuentes } donde `fuentes` indica dónde se encontró.
+     */
     const isHomologado = useCallback((smsValue, fecha) => {
-        if (!smsValue || !fecha || !columnMap) return false
-        const { smsCol, fechaCol } = columnMap
+        if (!smsValue || !fecha) return { homologado: false, fuentes: [] }
         const smsNorm = String(smsValue).trim().toLowerCase()
-        return records.some(r =>
-            String(r[smsCol] ?? '').trim().toLowerCase() === smsNorm &&
-            String(r[fechaCol] ?? '').trim() === fecha
-        )
-    }, [records, columnMap])
 
-    return { records, columnMap, loading, error, saveFromExcel, clearAll, isHomologado }
+        const encontradas = Object.entries(fuentes)
+            .filter(([, f]) => f && f.smsCol && f.fecha === fecha)
+            .filter(([, f]) => f.records.some(r => String(r[f.smsCol] ?? '').trim().toLowerCase() === smsNorm))
+            .map(([id, f]) => ({ id, nombre: f.nombre }))
+
+        return { homologado: encontradas.length > 0, fuentes: encontradas }
+    }, [fuentes])
+
+    return { fuentes, loading, error, saveFuente, clearFuente, isHomologado }
 }
