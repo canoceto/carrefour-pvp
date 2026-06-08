@@ -1,7 +1,6 @@
 .wrap {
-  padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
+  padding: 24px 32px;
+  max-width: none;
   animation: fadeIn 0.3s ease;
   display: flex;
   flex-direction: column;

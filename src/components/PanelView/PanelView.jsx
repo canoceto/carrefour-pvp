@@ -561,10 +561,10 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                                         <td><EstadoBadge estado={s.estado} /></td>
                                         <td className={styles.tdActions} onClick={e => e.stopPropagation()}>
                                             {recibido && (
-                                                <button className={`${styles.btnSm} ${styles.btnSmMover}`} onClick={() => setModalMover(s)}>→ Activar</button>
+                                                <button className={`${styles.btnSm} ${styles.btnSmMover}`} onClick={() => setModalMover(s)}>Activar</button>
                                             )}
                                             {!respondido && (
-                                                <button className={`${styles.btnSm} ${styles.btnSmResp}`} onClick={() => openResponder(s)}>✓ Responder</button>
+                                                <button className={`${styles.btnSm} ${styles.btnSmResp}`} onClick={() => openResponder(s)}>Responder</button>
                                             )}
                                         </td>
                                     </tr>
