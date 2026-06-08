@@ -24,7 +24,7 @@ const EMPRESAS = [
   'EXPRESS', 'CANARIAS', 'PENINSULA', 'TIENDA', 'SUPECO',
 ]
 
-export default function FormView({ user, onSubmit, showToast, getPrioridad, fieldConfig }) {
+export default function FormView({ user, onSubmit, showToast, getPrioridad, fieldConfig, isHomologado }) {
   const fc = (key) => fieldConfig?.[key] ?? DEFAULT_FIELD_CONFIG[key]
 
   const today = new Date().toISOString().split('T')[0]
@@ -204,6 +204,11 @@ export default function FormView({ user, onSubmit, showToast, getPrioridad, fiel
           {show('smsDescripcion') && (
             <Field label={lbl('smsDescripcion')} req={req('smsDescripcion')}>
               <input type="text" value={form.smsDescripcion} onChange={set('smsDescripcion')} placeholder="Ej: 867504 o COSTILLA SEMICARNUDA CRF" className={ic('smsDescripcion')} />
+              {form.smsDescripcion && isHomologado && (
+                isHomologado(form.smsDescripcion, form.fecha)
+                  ? <div className={styles.homBadgeOk}>✓ Homologado hoy</div>
+                  : <div className={styles.homBadgeNo}>✗ No homologado hoy</div>
+              )}
             </Field>
           )}
           {show('comentarios') && (

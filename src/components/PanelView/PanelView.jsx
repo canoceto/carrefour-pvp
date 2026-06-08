@@ -188,7 +188,7 @@ function RespForm({ form, onChange, modalResp, bulkMode, selectedCount }) {
 
 /* ══════════════════════════════════════════ */
 
-export default function PanelView({ solicitudes, updateSolicitud, showToast, currentUser, prioridades, updatePrioridad, resetDefaults }) {
+export default function PanelView({ solicitudes, updateSolicitud, showToast, currentUser, prioridades, updatePrioridad, resetDefaults, isHomologado }) {
     const [modalMover,         setModalMover]         = useState(null)
     const [modalResp,          setModalResp]          = useState(null)   // null | solicitud | 'bulk'
     const [modalVer,           setModalVer]           = useState(null)
@@ -530,7 +530,12 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                                         <td className={styles.tdDate}>{s.timestamp}</td>
                                         <td><span className={`${styles.secBadge} ${secClass}`}>{s.seccion}</span></td>
                                         <td className={styles.tdPeticion}>{s.peticion}</td>
-                                        <td className={styles.tdDesc}>{s.smsDescripcion || '—'}</td>
+                                        <td className={styles.tdDesc}>
+                                            {s.smsDescripcion || '—'}
+                                            {s.smsDescripcion && isHomologado?.(s.smsDescripcion, s.fecha) && (
+                                                <span className={styles.badgeHom} title="Homologado">✓ HOM</span>
+                                            )}
+                                        </td>
                                         <td className={styles.tdEmpresa}>{s.empresa}{s.codtienda ? ` · ${s.codtienda}` : ''}</td>
                                         <td className={styles.tdPrice}>{s.pvpRec ? `€${s.pvpRec}` : '—'}</td>
                                         <td className={styles.tdPrice}>{s.pvpMercadona ? `€${s.pvpMercadona}` : '—'}</td>

@@ -1,4 +1,5 @@
-export { solicitudesService } from './solicitudesService'
-export { prioridadesService } from './prioridadesService'
-export { configService }      from './configService'
+export { solicitudesService }    from './solicitudesService'
+export { prioridadesService }    from './prioridadesService'
+export { configService }         from './configService'
+export { homologacionService }   from './homologacionService'
 export { isApiMode, setAuthToken, ApiError } from './api'
