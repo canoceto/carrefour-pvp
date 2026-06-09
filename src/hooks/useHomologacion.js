@@ -8,9 +8,10 @@ import { homologacionService } from '../services'
  * representa esos datos) y columna de código SMS.
  */
 export const FUENTES_HOMOLOGACION = [
-    { id: 'homologos_drive',      nombre: 'Homólogos Drive',      hint: 'Maestro de homólogos y coeficientes (hoja ARTÍCULOS)' },
-    { id: 'homologacion_inversa', nombre: 'Homologación Inversa', hint: 'SMS homologados / sin match frente a la competencia' },
-    { id: 'sms_dashboard',        nombre: 'SMS Dashboard',        hint: 'Panel de SMS creados / actualizados' },
+    { id: 'homologos_drive',       nombre: 'Homólogos Drive',      hint: 'Maestro de homólogos y coeficientes (hoja ARTÍCULOS)' },
+    { id: 'datos_homologos_pft',   nombre: 'Datos Homólogos PFT',  hint: 'Tabla de homólogos PFT (Datos_Tabla_Homologos_PFT)' },
+    { id: 'pvp_peninsula_pft',     nombre: 'PVP Península PFT',    hint: 'Resumen PVP Península PFT — ID_UDS y UDS por SMS (PVP_Peninsula_PFT_Resumen)', soloConsulta: true },
+    { id: 'sms_dashboard',         nombre: 'SMS Dashboard',        hint: 'Panel de SMS creados / actualizados' },
 ]
 
 /** Normaliza fechas de Excel a "YYYY-MM-DD" */
@@ -39,19 +40,28 @@ function normalizeDate(value) {
     return s
 }
 
-/** Parsea un archivo Excel y devuelve { headers, rows } */
-export function parseExcelFile(file) {
+/**
+ * Parsea un archivo Excel y devuelve { headers, rows, headerRow }.
+ * headerRow: número de fila (base 0) usada como cabecera, o 'auto' para detección automática.
+ * Cuando 'auto': si la fila 0 tiene menos del 30 % de celdas no vacías se usa la fila 1.
+ */
+export function parseExcelFile(file, headerRow = 0) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader()
         reader.onload = e => {
             try {
                 const wb = XLSX.read(e.target.result, { type: 'binary', cellDates: false })
                 const ws = wb.Sheets[wb.SheetNames[0]]
-                const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
-                if (data.length === 0) return resolve({ headers: [], rows: [] })
-                const headers = data[0].map(h => String(h).trim())
-                const rows = data.slice(1).filter(r => r.some(c => c !== ''))
-                resolve({ headers, rows })
+                const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+                if (raw.length === 0) return resolve({ headers: [], rows: [], headerRow: 0 })
+
+                let hRow = headerRow === 'auto'
+                    ? (raw[0].filter(c => String(c).trim()).length < raw[0].length * 0.3 && raw.length > 1 ? 1 : 0)
+                    : Number(headerRow) || 0
+
+                const headers = raw[hRow].map(h => String(h).trim())
+                const rows = raw.slice(hRow + 1).filter(r => r.some(c => c !== ''))
+                resolve({ headers, rows, headerRow: hRow })
             } catch (err) {
                 reject(err)
             }
@@ -116,7 +126,10 @@ export function useHomologacion() {
         if (!smsValue || !fecha) return { homologado: false, fuentes: [] }
         const smsNorm = String(smsValue).trim().toLowerCase()
 
+        const fuentesExcluidas = new Set(FUENTES_HOMOLOGACION.filter(f => f.soloConsulta).map(f => f.id))
+
         const encontradas = Object.entries(fuentes)
+            .filter(([id]) => !fuentesExcluidas.has(id))
             .filter(([, f]) => f && f.smsCol && f.fecha === fecha)
             .filter(([, f]) => f.records.some(r => String(r[f.smsCol] ?? '').trim().toLowerCase() === smsNorm))
             .map(([id, f]) => ({ id, nombre: f.nombre }))

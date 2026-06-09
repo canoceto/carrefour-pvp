@@ -93,8 +93,8 @@ export default function App() {
         />
       )}
 
-      {isAdmin && view === 'metricas' && (
-        <MetricasView solicitudes={solicitudes} />
+      {view === 'metricas' && (
+        <MetricasView solicitudes={solicitudes} currentUser={user} isAdmin={isAdmin} />
       )}
 
       {isAdmin && view === 'panel' && (
@@ -106,6 +106,7 @@ export default function App() {
           prioridades={prioridades}
           updatePrioridad={updatePrioridad}
           resetDefaults={resetDefaults}
+          fuentes={homologaciones}
         />
       )}
 

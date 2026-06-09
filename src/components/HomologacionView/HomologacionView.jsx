@@ -5,38 +5,55 @@ import { parseExcelFile, FUENTES_HOMOLOGACION } from '../../hooks/useHomologacio
 const today = () => new Date().toISOString().split('T')[0]
 
 function UploadModal({ show, fuenteMeta, onClose, onConfirm }) {
-    const [step,     setStep]     = useState('idle')  // idle | mapping | loading
-    const [headers,  setHeaders]  = useState([])
-    const [rows,     setRows]     = useState([])
-    const [smsCol,   setSmsCol]   = useState('')
-    const [fecha,    setFecha]    = useState(today())
-    const [fileName, setFileName] = useState('')
-    const [error,    setError]    = useState('')
-    const fileRef = useRef()
+    const [step,      setStep]      = useState('idle')  // idle | mapping | loading
+    const [headers,   setHeaders]   = useState([])
+    const [rows,      setRows]      = useState([])
+    const [smsCol,    setSmsCol]    = useState('')
+    const [fecha,     setFecha]     = useState(today())
+    const [fileName,  setFileName]  = useState('')
+    const [error,     setError]     = useState('')
+    const [headerRow, setHeaderRow] = useState(0)
+    const fileRef    = useRef()
+    const cachedFile = useRef(null)
 
     const reset = () => {
         setStep('idle'); setHeaders([]); setRows([])
         setSmsCol(''); setFecha(today()); setFileName(''); setError('')
+        setHeaderRow(0); cachedFile.current = null
+    }
+
+    const applyParse = async (file, hRow) => {
+        const { headers: h, rows: r, headerRow: detected } = await parseExcelFile(file, hRow)
+        if (h.length === 0) throw new Error('El archivo está vacío o no tiene encabezados.')
+        setHeaders(h)
+        setRows(r)
+        setHeaderRow(detected)
+        const autoSms = h.find(c => /^sms$/i.test(c)) || h.find(c => /sms|codigo|código/i.test(c)) || ''
+        setSmsCol(autoSms)
     }
 
     const handleFile = async (e) => {
         const file = e.target.files[0]
         if (!file) return
         setError('')
+        cachedFile.current = file
         try {
-            const { headers: h, rows: r } = await parseExcelFile(file)
-            if (h.length === 0) { setError('El archivo está vacío o no tiene encabezados.'); return }
-            setHeaders(h)
-            setRows(r)
+            await applyParse(file, 'auto')
             setFileName(file.name)
-            // Auto-detectar columna del código SMS por nombre
-            const autoSms = h.find(c => /^sms$/i.test(c)) || h.find(c => /sms|codigo|código/i.test(c)) || ''
-            setSmsCol(autoSms)
             setStep('mapping')
         } catch (err) {
             setError('No se pudo leer el archivo: ' + err.message)
         }
         e.target.value = ''
+    }
+
+    const handleHeaderRowChange = async (newRow) => {
+        if (!cachedFile.current) return
+        try {
+            await applyParse(cachedFile.current, newRow)
+        } catch (err) {
+            setError('Error al releer el archivo: ' + err.message)
+        }
     }
 
     const handleConfirm = async () => {
@@ -68,9 +85,9 @@ function UploadModal({ show, fuenteMeta, onClose, onConfirm }) {
                         <div className={styles.uploadZone} onClick={() => fileRef.current?.click()}>
                             <div className={styles.uploadIcon}>📂</div>
                             <div className={styles.uploadText}>Haz clic para seleccionar un archivo Excel</div>
-                            <div className={styles.uploadSub}>.xlsx · .xls · .csv</div>
+                            <div className={styles.uploadSub}>.xlsx · .xls · .xlsb · .csv</div>
                         </div>
-                        <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} style={{ display: 'none' }} />
+                        <input ref={fileRef} type="file" accept=".xlsx,.xls,.xlsb,.csv" onChange={handleFile} style={{ display: 'none' }} />
                         {error && <div className={styles.uploadError}>{error}</div>}
                     </div>
                 )}
@@ -96,6 +113,18 @@ function UploadModal({ show, fuenteMeta, onClose, onConfirm }) {
                                     value={fecha}
                                     onChange={e => setFecha(e.target.value)}
                                 />
+                            </div>
+                            <div className={styles.mappingField}>
+                                <label className={styles.mappingLabel}>Fila de encabezados</label>
+                                <select
+                                    className={styles.mappingSelect}
+                                    value={headerRow}
+                                    onChange={e => handleHeaderRowChange(Number(e.target.value))}
+                                >
+                                    <option value={0}>Fila 1 (primera fila)</option>
+                                    <option value={1}>Fila 2 (segunda fila)</option>
+                                    <option value={2}>Fila 3 (tercera fila)</option>
+                                </select>
                             </div>
                         </div>
                         <div className={styles.mappingNote}>

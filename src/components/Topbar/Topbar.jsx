@@ -27,14 +27,12 @@ export default function Topbar({view, setView, user, logout, getInitials, pendin
                         )}
                     </button>
                 )}
-                {isAdmin && (
-                    <button
-                        className={`${styles.navTab} ${view === 'metricas' ? styles.active : ''}`}
-                        onClick={() => setView('metricas')}
-                    >
-                        <span>📈</span> Métricas
-                    </button>
-                )}
+                <button
+                    className={`${styles.navTab} ${view === 'metricas' ? styles.active : ''}`}
+                    onClick={() => setView('metricas')}
+                >
+                    <span>📈</span> Métricas
+                </button>
                 {isAdmin && (
                     <button
                         className={`${styles.navTab} ${view === 'competencia' ? styles.active : ''}`}

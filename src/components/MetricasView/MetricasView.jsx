@@ -12,11 +12,11 @@ const SECCION_COLORS = {
 }
 
 const PRIO_META = {
-    1: { color: '#b91c1c', bg: '#fef2f2', bar: '#ef4444', label: 'Urgente' },
-    2: { color: '#c2410c', bg: '#fff7ed', bar: '#f97316', label: 'Alta' },
-    3: { color: '#a16207', bg: '#fefce8', bar: '#eab308', label: 'Media' },
-    4: { color: '#1d4ed8', bg: '#eff6ff', bar: '#3b82f6', label: 'Baja' },
-    5: { color: '#5e6d8a', bg: '#f8f9fb', bar: '#94a3b8', label: 'Normal' },
+    1: { bar: '#ef4444', label: 'Urgente' },
+    2: { bar: '#f97316', label: 'Alta' },
+    3: { bar: '#eab308', label: 'Media' },
+    4: { bar: '#3b82f6', label: 'Baja' },
+    5: { bar: '#94a3b8', label: 'Normal' },
 }
 
 function groupBy(arr, key) {
@@ -97,10 +97,26 @@ function KpiCard({ icon, label, value, sub, accent }) {
 
 /* ── main component ────────────────────────────── */
 
-export default function MetricasView({ solicitudes }) {
+export default function MetricasView({ solicitudes, currentUser, isAdmin }) {
     const [modalExport, setModalExport] = useState(false)
+    const [fechaDesde, setFechaDesde] = useState('')
+    const [fechaHasta, setFechaHasta] = useState('')
+
+    // Los usuarios no admin solo ven sus propias solicitudes
+    const propias = useMemo(() => {
+        if (isAdmin) return solicitudes
+        const correo = (currentUser?.email || '').toLowerCase()
+        return solicitudes.filter(s => (s.correo || '').toLowerCase() === correo)
+    }, [solicitudes, isAdmin, currentUser])
+
+    const filtradas = useMemo(() => propias.filter(s => {
+        if (fechaDesde && s.fecha && s.fecha < fechaDesde) return false
+        if (fechaHasta && s.fecha && s.fecha > fechaHasta) return false
+        return true
+    }), [propias, fechaDesde, fechaHasta])
 
     const m = useMemo(() => {
+        const solicitudes = filtradas
         const total       = solicitudes.length
         const respondidas = solicitudes.filter(s => s.estado === 'respondido')
         const recibidas   = solicitudes.filter(s => s.estado === 'recibido')
@@ -151,15 +167,62 @@ export default function MetricasView({ solicitudes }) {
             referencias, gestionadas,
             porSeccion, porPeticion, porEmpresa, respPorSeccion, meses,
         }
-    }, [solicitudes])
+    }, [filtradas])
 
-    if (solicitudes.length === 0) {
+    const hayFiltroFecha = fechaDesde || fechaHasta
+
+    const filtroFechaUI = (
+        <div className={styles.dateFilter}>
+            <span className={styles.dateFilterLabel}>Filtrar por fecha</span>
+            <input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} />
+            <span>—</span>
+            <input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} />
+            {hayFiltroFecha && (
+                <button className={styles.dateFilterClear} onClick={() => { setFechaDesde(''); setFechaHasta('') }}>✕ Limpiar</button>
+            )}
+        </div>
+    )
+
+    if (propias.length === 0) {
         return (
-            <div className={styles.empty}>
-                <div className={styles.emptyIcon}>📊</div>
-                <div className={styles.emptyTitle}>Sin datos aún</div>
-                <div className={styles.emptySub}>
-                    Las métricas aparecerán aquí una vez se registren solicitudes desde el formulario.
+            <div className={styles.wrap}>
+                <div className={styles.header}>
+                    <div>
+                        <div className={styles.title}>MÉTRICAS</div>
+                        <div className={styles.subtitle}>
+                            {isAdmin ? 'Análisis de solicitudes de cambio PVP' : 'Análisis de tus solicitudes de cambio PVP'}
+                        </div>
+                    </div>
+                </div>
+                <div className={styles.empty}>
+                    <div className={styles.emptyIcon}>📊</div>
+                    <div className={styles.emptyTitle}>Sin datos aún</div>
+                    <div className={styles.emptySub}>
+                        {isAdmin
+                            ? 'Las métricas aparecerán aquí una vez se registren solicitudes desde el formulario.'
+                            : 'Tus métricas aparecerán aquí una vez registres solicitudes desde el formulario.'}
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    if (filtradas.length === 0) {
+        return (
+            <div className={styles.wrap}>
+                <div className={styles.header}>
+                    <div>
+                        <div className={styles.title}>MÉTRICAS</div>
+                        <div className={styles.subtitle}>
+                            {isAdmin ? 'Análisis de solicitudes de cambio PVP' : 'Análisis de tus solicitudes de cambio PVP'}
+                        </div>
+                    </div>
+                    {filtroFechaUI}
+                </div>
+                <div className={styles.empty}>
+                    <div className={styles.emptyIcon}>📅</div>
+                    <div className={styles.emptyTitle}>Sin resultados en este rango de fechas</div>
+                    <div className={styles.emptySub}>Prueba a ampliar o limpiar el filtro de fechas.</div>
                 </div>
             </div>
         )
@@ -175,17 +238,22 @@ export default function MetricasView({ solicitudes }) {
             <div className={styles.header}>
                 <div>
                     <div className={styles.title}>MÉTRICAS</div>
-                    <div className={styles.subtitle}>Análisis de solicitudes de cambio PVP</div>
+                    <div className={styles.subtitle}>
+                        {isAdmin ? 'Análisis de solicitudes de cambio PVP — todos los usuarios' : 'Análisis de tus solicitudes de cambio PVP'}
+                    </div>
                 </div>
-                <button className={styles.reportBtn} onClick={() => setModalExport(true)}>
-                    📄 Generar Reporte
-                </button>
+                <div className={styles.headerActions}>
+                    {filtroFechaUI}
+                    <button className={styles.reportBtn} onClick={() => setModalExport(true)}>
+                        📄 Generar Reporte
+                    </button>
+                </div>
             </div>
 
             <ExportModal
                 show={modalExport}
                 onClose={() => setModalExport(false)}
-                solicitudes={solicitudes}
+                solicitudes={filtradas}
                 title="GENERAR REPORTE"
             />
 
@@ -263,31 +331,37 @@ export default function MetricasView({ solicitudes }) {
                 {/* Prioridad */}
                 <div className={styles.card}>
                     <div className={styles.cardTitle}>Distribución por prioridad</div>
-                    <div className={styles.prioList}>
-                        {[1, 2, 3, 4, 5].map(n => {
-                            const total = solicitudes.filter(s => Number(s.prioridad) === n).length
-                            const resp  = solicitudes.filter(s => Number(s.prioridad) === n && s.estado === 'respondido').length
-                            const pendN = total - resp
-                            const maxP  = Math.max(...[1,2,3,4,5].map(p => solicitudes.filter(s => Number(s.prioridad) === p).length), 1)
-                            const { color, bg, bar, label } = PRIO_META[n]
-                            return (
-                                <div key={n} className={styles.prioRow}>
-                                    <div className={styles.prioBadge} style={{ background: bg, color }}> P{n}</div>
-                                    <div className={styles.prioBody}>
-                                        <div className={styles.prioHead}>
-                                            <span className={styles.prioName}>{label}</span>
-                                            <span className={styles.prioCount}>
-                                                {total} sol.
+                    <div className={styles.donutSection}>
+                        <DonutChart
+                            total={m.total}
+                            segments={[1, 2, 3, 4, 5].map(n => ({
+                                value: filtradas.filter(s => Number(s.prioridad) === n).length,
+                                color: PRIO_META[n].bar,
+                            }))}
+                        />
+                        <div className={styles.legend}>
+                            {[1, 2, 3, 4, 5].map(n => {
+                                const total = filtradas.filter(s => Number(s.prioridad) === n).length
+                                const resp  = filtradas.filter(s => Number(s.prioridad) === n && s.estado === 'respondido').length
+                                const pendN = total - resp
+                                const { bar, label } = PRIO_META[n]
+                                return (
+                                    <div key={n} className={styles.legendItem}>
+                                        <div className={styles.legendDot} style={{ background: bar }} />
+                                        <div>
+                                            <div className={styles.legendLabel}>P{n} · {label}</div>
+                                            <div className={styles.legendVal}>
+                                                {total}
+                                                <span className={styles.legendPct}>
+                                                    {' '}({m.total ? Math.round((total / m.total) * 100) : 0}%)
+                                                </span>
                                                 {pendN > 0 && <span style={{ color: '#E2001A' }}> · {pendN} pend.</span>}
-                                            </span>
-                                        </div>
-                                        <div className={styles.hBarTrack}>
-                                            <div className={styles.hBarFill} style={{ width: `${maxP > 0 ? (total / maxP) * 100 : 0}%`, background: bar }} />
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            )
-                        })}
+                                )
+                            })}
+                        </div>
                     </div>
                 </div>
             </div>

@@ -69,6 +69,39 @@ const SECCIONES_FILTER = [
 function DLabel({ label }) { return <div className={styles.dLabel}>{label}</div> }
 function DVal({ val })     { return <div className={styles.dVal}>{val || '—'}</div> }
 
+function lookupPvpPeninsula(fuentes, smsValue) {
+    const fuente = fuentes?.pvp_peninsula_pft
+    if (!fuente?.records?.length || !fuente.smsCol || !smsValue) return null
+    const smsNorm = String(smsValue).trim().toLowerCase()
+    return fuente.records.find(r => String(r[fuente.smsCol] ?? '').trim().toLowerCase() === smsNorm) || null
+}
+
+function PvpPenInfo({ record }) {
+    if (!record) return null
+    const idUds = record['ID_UDS'] ?? record['ID UDS'] ?? ''
+    const uds   = record['UDS']    ?? ''
+    if (!idUds && !uds) return null
+    return (
+        <div className={styles.pvpPenBox}>
+            <div className={styles.pvpPenTitle}>PVP Península PFT</div>
+            <div className={styles.pvpPenGrid}>
+                {idUds !== '' && (
+                    <div className={styles.pvpPenItem}>
+                        <span className={styles.pvpPenLabel}>ID_UDS</span>
+                        <span className={styles.pvpPenVal}>{idUds}</span>
+                    </div>
+                )}
+                {uds !== '' && (
+                    <div className={styles.pvpPenItem}>
+                        <span className={styles.pvpPenLabel}>UDS</span>
+                        <span className={styles.pvpPenVal}>{uds}</span>
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
 function DetailGrid({ s }) {
     const items = [
         ['Solicitante', s.solicitante], ['Correo', s.correo],
@@ -199,7 +232,7 @@ function RespForm({ form, onChange, modalResp, bulkMode, selectedCount }) {
 
 /* ══════════════════════════════════════════ */
 
-export default function PanelView({ solicitudes, updateSolicitud, showToast, currentUser, prioridades, updatePrioridad, resetDefaults }) {
+export default function PanelView({ solicitudes, updateSolicitud, showToast, currentUser, prioridades, updatePrioridad, resetDefaults, fuentes }) {
     const [modalMover,         setModalMover]         = useState(null)
     const [modalResp,          setModalResp]          = useState(null)   // null | solicitud | 'bulk'
     const [modalVer,           setModalVer]           = useState(null)
@@ -702,6 +735,7 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                    </>}>
                 {modalVer && <>
                     <DetailGrid s={modalVer} />
+                    <PvpPenInfo record={lookupPvpPeninsula(fuentes, modalVer.smsDescripcion)} />
                     {modalVer.estado === 'respondido' && (
                         <div className={styles.respResumen}>
                             <div className={styles.detailGrid}>
