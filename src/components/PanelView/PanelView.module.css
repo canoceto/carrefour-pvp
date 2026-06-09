@@ -460,32 +460,69 @@
   border-bottom: 1px solid #bfdbfe;
 }
 
-.pvpPenGrid {
+.pvpPenMeta {
   display: flex;
-  gap: 0;
+  gap: 20px;
+  padding: 8px 14px;
+  border-bottom: 1px solid #dbeafe;
+  background: #f8faff;
 }
-
-.pvpPenItem {
-  flex: 1;
-  padding: 10px 14px;
-  border-right: 1px solid #bfdbfe;
-}
-.pvpPenItem:last-child { border-right: none; }
 
 .pvpPenLabel {
-  display: block;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: #93c5fd;
-  margin-bottom: 3px;
+  margin-right: 4px;
 }
 
-.pvpPenVal {
-  font-size: 15px;
+/* Comparison table */
+.pvpCompTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pvpCompTh {
+  padding: 6px 12px;
+  font-size: 10px;
   font-weight: 700;
-  color: #1e40af;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #6b7280;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+}
+.pvpCompTh:not(:first-child) { text-align: right; }
+
+.pvpCompRow:not(:last-child) td { border-bottom: 1px solid #f0f4ff; }
+
+.pvpCompName {
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+  letter-spacing: 0.04em;
+}
+
+.pvpCompStar {
+  color: #1d4ed8;
+  font-weight: 900;
+}
+
+.pvpCompVal {
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.pvpCompFormVal {
+  font-weight: 700;
+  color: #1d4ed8;
 }
 
 /* Modal misc */

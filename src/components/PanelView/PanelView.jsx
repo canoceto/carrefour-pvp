@@ -76,28 +76,66 @@ function lookupPvpPeninsula(fuentes, smsValue) {
     return fuente.records.find(r => String(r[fuente.smsCol] ?? '').trim().toLowerCase() === smsNorm) || null
 }
 
-function PvpPenInfo({ record }) {
-    if (!record) return null
-    const idUds = record['ID_UDS'] ?? record['ID UDS'] ?? ''
-    const uds   = record['UDS']    ?? ''
-    if (!idUds && !uds) return null
+const COMP_ROWS = [
+    { label: 'MERCADONA', formKey: 'pvpMercadona', pvpKey: 'MERCADONA',    noPromoKey: 'MERCADONA NoPromo' },
+    { label: 'LIDL',      formKey: 'pvpLidl',      pvpKey: 'LIDL',         noPromoKey: 'LIDL NoPromo' },
+    { label: 'ALCAMPO',   formKey: 'pvpAlcampo',   pvpKey: 'ALCAMPO',      noPromoKey: 'ALCAMPO NoPromo' },
+]
+
+function fmtP(v) {
+    if (v === '' || v === null || v === undefined) return '—'
+    const n = parseFloat(v)
+    return isNaN(n) ? String(v) : `€${n.toFixed(2)}`
+}
+
+function PvpPenInfo({ record, solicitud }) {
+    const hasFormPrices = COMP_ROWS.some(r => solicitud?.[r.formKey])
+    if (!record && !hasFormPrices) return null
+
+    const idUds = record?.['ID_UDS'] ?? record?.['ID UDS'] ?? ''
+    const uds   = record?.['UDS'] ?? ''
+
     return (
         <div className={styles.pvpPenBox}>
-            <div className={styles.pvpPenTitle}>PVP Península PFT</div>
-            <div className={styles.pvpPenGrid}>
-                {idUds !== '' && (
-                    <div className={styles.pvpPenItem}>
-                        <span className={styles.pvpPenLabel}>ID_UDS</span>
-                        <span className={styles.pvpPenVal}>{idUds}</span>
-                    </div>
-                )}
-                {uds !== '' && (
-                    <div className={styles.pvpPenItem}>
-                        <span className={styles.pvpPenLabel}>UDS</span>
-                        <span className={styles.pvpPenVal}>{uds}</span>
-                    </div>
-                )}
-            </div>
+            <div className={styles.pvpPenTitle}>PVP Península PFT{!record && ' · artículo no encontrado en la fuente cargada'}</div>
+
+            {(idUds !== '' || uds !== '') && (
+                <div className={styles.pvpPenMeta}>
+                    {idUds !== '' && <span><span className={styles.pvpPenLabel}>ID_UDS</span> <strong>{idUds}</strong></span>}
+                    {uds   !== '' && <span><span className={styles.pvpPenLabel}>UDS</span> <strong>{uds}</strong></span>}
+                </div>
+            )}
+
+            <table className={styles.pvpCompTable}>
+                <thead>
+                    <tr>
+                        <th className={styles.pvpCompTh}>Competidor</th>
+                        <th className={styles.pvpCompTh}>Formulario</th>
+                        <th className={styles.pvpCompTh}>PFT con promo</th>
+                        <th className={styles.pvpCompTh}>PFT sin promo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {COMP_ROWS.map(({ label, formKey, pvpKey, noPromoKey }) => {
+                        const formVal  = solicitud?.[formKey] ?? ''
+                        const conPromo = record?.[pvpKey]     ?? ''
+                        const sinPromo = record?.[noPromoKey] ?? ''
+                        const hasForm  = formVal !== '' && formVal !== null && formVal !== undefined
+                        return (
+                            <tr key={label} className={styles.pvpCompRow}>
+                                <td className={styles.pvpCompName}>
+                                    {label}{hasForm && <span className={styles.pvpCompStar}> *</span>}
+                                </td>
+                                <td className={`${styles.pvpCompVal} ${hasForm ? styles.pvpCompFormVal : ''}`}>
+                                    {fmtP(formVal)}
+                                </td>
+                                <td className={styles.pvpCompVal}>{fmtP(conPromo)}</td>
+                                <td className={styles.pvpCompVal}>{fmtP(sinPromo)}</td>
+                            </tr>
+                        )
+                    })}
+                </tbody>
+            </table>
         </div>
     )
 }
@@ -735,7 +773,7 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
                    </>}>
                 {modalVer && <>
                     <DetailGrid s={modalVer} />
-                    <PvpPenInfo record={lookupPvpPeninsula(fuentes, modalVer.smsDescripcion)} />
+                    <PvpPenInfo record={lookupPvpPeninsula(fuentes, modalVer.smsDescripcion)} solicitud={modalVer} />
                     {modalVer.estado === 'respondido' && (
                         <div className={styles.respResumen}>
                             <div className={styles.detailGrid}>
