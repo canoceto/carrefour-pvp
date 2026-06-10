@@ -76,12 +76,13 @@ export const configService = {
             const toRemove = currentEmails.filter(e => !nextEmails.includes(e))
 
             if (toAdd.length) {
-                const { error } = await supabase.from(ADMINS_TABLE).insert(toAdd.map(email => ({ email })))
-                if (error) throw error
+                const { error } = await supabase.from(ADMINS_TABLE)
+                    .upsert(toAdd.map(email => ({ email })), { onConflict: 'email', ignoreDuplicates: true })
+                if (error) { console.error('configService.save (app_admins insert):', error); throw error }
             }
             if (toRemove.length) {
                 const { error } = await supabase.from(ADMINS_TABLE).delete().in('email', toRemove)
-                if (error) throw error
+                if (error) { console.error('configService.save (app_admins delete):', error); throw error }
             }
 
             const fieldRows = Object.entries(config.fields ?? {}).map(([field_key, f]) => ({
@@ -94,7 +95,7 @@ export const configService = {
             }))
             if (fieldRows.length) {
                 const { error } = await supabase.from(FIELDS_TABLE).upsert(fieldRows, { onConflict: 'field_key' })
-                if (error) throw error
+                if (error) { console.error('configService.save (app_field_config upsert):', error); throw error }
             }
 
             return config
