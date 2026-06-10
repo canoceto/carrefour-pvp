@@ -340,7 +340,9 @@ CREATE TRIGGER trg_homologacion_fuentes_updated_at
 --
 -- Reglas solicitadas:
 --   - Lectura: cualquier usuario autenticado, en todas las tablas.
---   - Escritura en `solicitudes`: cualquier usuario autenticado.
+--   - `solicitudes`: lectura → admins ven todas, el resto solo las suyas (por
+--     `correo`); creación → cualquier usuario autenticado; gestión
+--     (actualizar/borrar) → solo administradores.
 --   - Escritura en tablas de referencia/homologación: solo administradores
 --     (emails presentes en `app_admins`).
 -- =====================================================================================
@@ -360,13 +362,29 @@ AS $$
   );
 $$;
 
--- ── solicitudes: lectura y escritura para cualquier usuario autenticado ─────────────
+-- ── solicitudes: admins ven/gestionan todo, el resto solo lo suyo ───────────────────
 ALTER TABLE solicitudes ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "solicitudes_all_authenticated" ON solicitudes
-  FOR ALL TO authenticated
-  USING (true)
+-- Lectura: los admins ven todas las solicitudes; el resto solo las que envió
+-- (comparando `correo` con el email del usuario autenticado).
+CREATE POLICY "solicitudes_select" ON solicitudes
+  FOR SELECT TO authenticated
+  USING (is_admin() OR correo = (auth.jwt() ->> 'email'));
+
+-- Creación: cualquier usuario autenticado puede enviar solicitudes.
+CREATE POLICY "solicitudes_insert" ON solicitudes
+  FOR INSERT TO authenticated
   WITH CHECK (true);
+
+-- Gestión (Panel: cambiar estado, responder, etc.): solo administradores.
+CREATE POLICY "solicitudes_update_admin" ON solicitudes
+  FOR UPDATE TO authenticated
+  USING (is_admin())
+  WITH CHECK (is_admin());
+
+CREATE POLICY "solicitudes_delete_admin" ON solicitudes
+  FOR DELETE TO authenticated
+  USING (is_admin());
 
 -- ── tablas de referencia / homologación: lectura para todos, escritura solo admin ──
 ALTER TABLE prioridades              ENABLE ROW LEVEL SECURITY;

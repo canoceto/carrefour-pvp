@@ -111,8 +111,8 @@ function PvpPenInfo({ record, solicitud }) {
                     <tr>
                         <th className={styles.pvpCompTh}>Competidor</th>
                         <th className={styles.pvpCompTh}>Formulario</th>
-                        <th className={styles.pvpCompTh}>PFT con promo</th>
-                        <th className={styles.pvpCompTh}>PFT sin promo</th>
+                        <th className={styles.pvpCompTh}>Con promo</th>
+                        <th className={styles.pvpCompTh}>Sin promo</th>
                     </tr>
                 </thead>
                 <tbody>
