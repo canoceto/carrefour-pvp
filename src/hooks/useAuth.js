@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { supabase, isSupabaseMode } from '../services/supabaseClient'
 
 export const GOOGLE_CLIENT_ID = '628635003355-h1ouuvb7ck5416mv2khc3igkkc1a5dd2.apps.googleusercontent.com'
 
@@ -18,6 +19,23 @@ function parseJwt(token) {
 function getInitials(name) {
     if (!name) return '?'
     return name.trim().split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
+}
+
+// Intercambia el id_token de Google por una sesión de Supabase (Google está dado de
+// alta como provider OAuth en Supabase). Sin esto las políticas RLS no reconocerían
+// al usuario como "authenticated". Requiere registrar GOOGLE_CLIENT_ID en Supabase:
+// Authentication > Providers > Google > Authorized Client IDs.
+async function syncSupabaseSession(idToken) {
+    if (!isSupabaseMode()) return
+    try {
+        const { error } = await supabase.auth.signInWithIdToken({
+            provider: 'google',
+            token: idToken,
+        })
+        if (error) console.error('Supabase auth (Google id_token):', error.message)
+    } catch (err) {
+        console.error('Supabase auth (Google id_token):', err)
+    }
 }
 
 export function useAuth() {
@@ -55,6 +73,7 @@ export function useAuth() {
         try {
             const payload = parseJwt(response.credential)
             loginWithPayload(payload)
+            syncSupabaseSession(response.credential)
         } catch {
             setError('Error al procesar las credenciales. Inténtalo de nuevo.')
             setLoading(false)
@@ -124,6 +143,9 @@ export function useAuth() {
         try { sessionStorage.removeItem(USER_KEY) } catch {}
         if (window.google?.accounts?.id) {
             window.google.accounts.id.disableAutoSelect()
+        }
+        if (isSupabaseMode()) {
+            supabase.auth.signOut().catch(() => {})
         }
         setUser(null)
     }, [])
