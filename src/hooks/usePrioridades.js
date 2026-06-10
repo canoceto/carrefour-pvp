@@ -29,15 +29,16 @@ export const DEFAULT_PRIORIDADES = {
     'POSICIONMIENTO':               2,
 }
 
-export function usePrioridades() {
+export function usePrioridades(ready = true) {
     const [prioridades, setPrioridades] = useState({ ...DEFAULT_PRIORIDADES })
     const [loading,     setLoading]     = useState(true)
 
     useEffect(() => {
+        if (!ready) return
         prioridadesService.get()
             .then(data => { setPrioridades(data); setLoading(false) })
             .catch(() => setLoading(false))
-    }, [])
+    }, [ready])
 
     const getPrioridad = useCallback((peticion) => prioridades[peticion] ?? 5, [prioridades])
 

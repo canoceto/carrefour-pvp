@@ -25,3 +25,5 @@ Thumbs.db
 # Local debug/verification scripts
 verify_*.mjs
 verify_*.png
+
+.vercel

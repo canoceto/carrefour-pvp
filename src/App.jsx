@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useAuth, useSolicitudes, useToast, usePrioridades, useConfig, useHomologacion } from './hooks'
 import { LoginScreen, Topbar, FormView, PanelView, MetricasView, ConfigView, CompetenciaView, HomologacionView, Toast, ExportModal } from './components'
-import { isApiMode } from './services'
+import { isApiMode, isSupabaseMode } from './services'
 
 function DataLoader() {
   return (
@@ -22,12 +22,13 @@ function DataLoader() {
 }
 
 export default function App() {
-  const { user, loading: authLoading, error, domainError, gsiReady, logout, renderGoogleButton, getInitials } = useAuth()
-  const { solicitudes, loading: loadingSol, error: errorSol, addSolicitud, updateSolicitud } = useSolicitudes()
+  const { user, loading: authLoading, error, domainError, gsiReady, sessionVersion, logout, renderGoogleButton, getInitials } = useAuth()
+  const dataReady = sessionVersion > 0
+  const { solicitudes, loading: loadingSol, error: errorSol, addSolicitud, updateSolicitud } = useSolicitudes(dataReady)
   const { toast, showToast } = useToast()
-  const { prioridades, loading: loadingPrio, getPrioridad, updatePrioridad, resetDefaults } = usePrioridades()
-  const { admins, fields, loading: loadingCfg, addAdmin, removeAdmin, updateField, resetFields } = useConfig()
-  const { fuentes: homologaciones, saveFuente: saveHomologacionFuente, clearFuente: clearHomologacionFuente, isHomologado } = useHomologacion()
+  const { prioridades, loading: loadingPrio, getPrioridad, updatePrioridad, resetDefaults } = usePrioridades(dataReady)
+  const { admins, fields, loading: loadingCfg, addAdmin, removeAdmin, updateField, resetFields } = useConfig(dataReady)
+  const { fuentes: homologaciones, saveFuente: saveHomologacionFuente, clearFuente: clearHomologacionFuente, isHomologado } = useHomologacion(dataReady)
   const [view, setView] = useState('form')
   const [modalExport, setModalExport] = useState(false)
 
@@ -47,8 +48,9 @@ export default function App() {
     )
   }
 
-  // Carga inicial de datos (solo en modo API para evitar flash en modo localStorage)
-  if (isApiMode() && (loadingSol || loadingPrio || loadingCfg)) {
+  // Carga inicial de datos (en modo API/Supabase, para evitar flash de datos vacíos
+  // mientras se resuelve la sesión y se cargan los datos reales)
+  if ((isApiMode() || isSupabaseMode()) && (loadingSol || loadingPrio || loadingCfg)) {
     return <DataLoader />
   }
 

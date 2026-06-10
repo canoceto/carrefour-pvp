@@ -44,6 +44,19 @@ export function useAuth() {
     const [error, setError] = useState('')
     const [domainError, setDomainError] = useState(false)
     const [gsiReady, setGsiReady] = useState(false)
+    // Indica si la sesión de Supabase está lista para ser usada por las queries con RLS.
+    // Empieza en 0 (no listo) en modo Supabase y se incrementa con cada cambio de sesión
+    // (sesión inicial, login, logout, refresh de token), para que los hooks de datos
+    // puedan (re)cargar una vez la sesión "authenticated" esté disponible.
+    const [sessionVersion, setSessionVersion] = useState(() => (isSupabaseMode() ? 0 : 1))
+
+    useEffect(() => {
+        if (!isSupabaseMode()) return
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+            setSessionVersion(v => v + 1)
+        })
+        return () => subscription.unsubscribe()
+    }, [])
 
     const loginWithPayload = useCallback((payload) => {
         const email = payload.email || ''
@@ -156,6 +169,7 @@ export function useAuth() {
         error,
         domainError,
         gsiReady,
+        sessionVersion,
         logout,
         renderGoogleButton,
         getInitials,

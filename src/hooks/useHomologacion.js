@@ -71,16 +71,17 @@ export function parseExcelFile(file, headerRow = 0) {
     })
 }
 
-export function useHomologacion() {
+export function useHomologacion(ready = true) {
     const [fuentes, setFuentes] = useState({})  // { [fuenteId]: { nombre, fileName, fecha, smsCol, records, updatedAt } }
     const [loading, setLoading] = useState(true)
     const [error,   setError]   = useState(null)
 
     useEffect(() => {
+        if (!ready) return
         homologacionService.getAll()
             .then(data => { setFuentes(data || {}); setLoading(false) })
             .catch(err => { setError(err.message); setLoading(false) })
-    }, [])
+    }, [ready])
 
     /** Guarda (o reemplaza) los registros de una fuente concreta tras el mapeo de columnas */
     const saveFuente = useCallback(async (fuenteId, rawRows, headers, map) => {

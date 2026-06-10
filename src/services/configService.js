@@ -60,7 +60,7 @@ export const configService = {
                 }
             })
 
-            return { admins: admins.length ? admins : [...SEED_ADMINS], fields }
+            return { admins, fields }
         }
         return lsRead()
     },

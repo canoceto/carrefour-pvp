@@ -1,16 +1,17 @@
 import { useState, useEffect, useCallback } from 'react'
 import { solicitudesService } from '../services'
 
-export function useSolicitudes() {
+export function useSolicitudes(ready = true) {
     const [solicitudes, setSolicitudes] = useState([])
     const [loading,     setLoading]     = useState(true)
     const [error,       setError]       = useState(null)
 
     useEffect(() => {
+        if (!ready) return
         solicitudesService.getAll()
             .then(data => { setSolicitudes(data); setLoading(false) })
             .catch(err => { setError(err.message); setLoading(false) })
-    }, [])
+    }, [ready])
 
     const addSolicitud = useCallback(async (solicitud) => {
         // Optimistic: muestra inmediatamente en la UI
