@@ -4,6 +4,7 @@ import SolicitanteHistorialModal from '../SolicitanteHistorialModal/SolicitanteH
 import SolicitantesListModal from '../SolicitantesListModal/SolicitantesListModal'
 import styles from './PanelView.module.css'
 import { NIVEL_LABELS, DEFAULT_PRIORIDADES } from '../../hooks/usePrioridades'
+import { enviarRespuestas, buildEmailPayload, isEmailConfigured } from '../../services/emailService'
 
 const HOJA_MAP = {
     CARNICERIA: 'Carne, Pesca y Panadería',
@@ -264,6 +265,11 @@ function RespForm({ form, onChange, modalResp, bulkMode, selectedCount }) {
                     ))}
                 </div>
             </div>
+            {form.enviar === 'SI' && !isEmailConfigured() && (
+                <div className={styles.enviarWarning}>
+                    ⚠ El envío de emails no está configurado (falta VITE_RESPUESTA_WEBHOOK_URL). Se guardará la respuesta pero no se enviará el correo.
+                </div>
+            )}
         </div>
     )
 }
@@ -390,27 +396,46 @@ export default function PanelView({ solicitudes, updateSolicitud, showToast, cur
         setRespForm(emptyRespForm())
     }
 
-    const confirmarRespuesta = () => {
+    const confirmarRespuesta = async () => {
         if (!respForm.observaciones.trim()) {
             showToast('⚠ Las observaciones son obligatorias', 'error')
             return
         }
         const fecha = new Date().toLocaleDateString('es-ES')
         const update = { estado: 'respondido', fechaRespuesta: fecha, ...respForm }
+        const enviar = respForm.enviar === 'SI'
 
         if (bulkMode) {
-            selected.forEach(id => updateSolicitud(id, update))
-            showToast(`✓ ${selected.size} solicitudes marcadas como respondidas`, 'success')
+            const targets = solicitudes.filter(s => selected.has(s.id))
+            targets.forEach(s => updateSolicitud(s.id, update))
+
+            if (enviar) {
+                const result = await enviarRespuestas(targets.map(s => buildEmailPayload(s, respForm)))
+                showToast(
+                    result.ok
+                        ? `✓ ${targets.length} solicitudes respondidas — emails enviados`
+                        : `✓ ${targets.length} solicitudes respondidas — error al enviar emails (${result.error})`,
+                    result.ok ? 'success' : 'error'
+                )
+            } else {
+                showToast(`✓ ${targets.length} solicitudes marcadas como respondidas`, 'success')
+            }
             clearSelection()
             setBulkMode(false)
         } else {
             updateSolicitud(modalResp.id, update)
-            showToast(
-                respForm.enviar === 'SI'
-                    ? `✓ Respondido — se enviará email a ${modalResp.correo}`
-                    : '✓ Marcado como respondido',
-                'success'
-            )
+
+            if (enviar) {
+                const result = await enviarRespuestas([buildEmailPayload(modalResp, respForm)])
+                showToast(
+                    result.ok
+                        ? `✓ Respondido — email enviado a ${modalResp.correo}`
+                        : `✓ Respondido — error al enviar email (${result.error})`,
+                    result.ok ? 'success' : 'error'
+                )
+            } else {
+                showToast('✓ Marcado como respondido', 'success')
+            }
         }
         setModalResp(null)
     }
