@@ -25,16 +25,16 @@ export const DEFAULT_FIELD_CONFIG = {
     pvpAlcampo:          { label: 'PVP Alcampo',            section: 'Precios',        type: 'price', required: true,  enabled: true },
 }
 
-export function useConfig(ready = true) {
+export function useConfig(sessionVersion = 0) {
     const [config,  setConfig]  = useState({ admins: [...SEED_ADMINS], fields: { ...DEFAULT_FIELD_CONFIG } })
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        if (!ready) return
+        if (sessionVersion === 0) return
         configService.get()
             .then(data => { setConfig(data); setLoading(false) })
             .catch(() => setLoading(false))
-    }, [ready])
+    }, [sessionVersion])
 
     const persist = useCallback(async (next) => {
         setConfig(next)

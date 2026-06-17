@@ -23,16 +23,15 @@ function DataLoader() {
 
 export default function App() {
   const { user, loading: authLoading, error, domainError, gsiReady, sessionVersion, logout, renderGoogleButton, getInitials } = useAuth()
-  const dataReady = sessionVersion > 0
-  const { solicitudes, loading: loadingSol, error: errorSol, addSolicitud, updateSolicitud } = useSolicitudes(dataReady)
+  const { solicitudes, loading: loadingSol, error: errorSol, addSolicitud, updateSolicitud } = useSolicitudes(sessionVersion)
   const { toast, showToast } = useToast()
-  const { prioridades, loading: loadingPrio, getPrioridad, updatePrioridad, resetDefaults } = usePrioridades(dataReady)
-  const { admins, fields, loading: loadingCfg, addAdmin, removeAdmin, updateField, resetFields } = useConfig(dataReady)
-  const { fuentes: homologaciones, saveFuente: saveHomologacionFuente, clearFuente: clearHomologacionFuente, isHomologado } = useHomologacion(dataReady)
+  const { prioridades, loading: loadingPrio, getPrioridad, updatePrioridad, resetDefaults } = usePrioridades(sessionVersion)
+  const { admins, fields, loading: loadingCfg, addAdmin, removeAdmin, updateField, resetFields } = useConfig(sessionVersion)
+  const { fuentes: homologaciones, saveFuente: saveHomologacionFuente, clearFuente: clearHomologacionFuente, isHomologado } = useHomologacion(sessionVersion)
   const [view, setView] = useState('form')
   const [modalExport, setModalExport] = useState(false)
 
-  const isAdmin = admins.map(a => a.toLowerCase()).includes(user?.email?.toLowerCase() ?? '')
+  const isAdmin = import.meta.env.DEV || admins.map(a => a.toLowerCase()).includes(user?.email?.toLowerCase() ?? '')
   const pendingCount = solicitudes.filter(s => s.estado === 'recibido').length
 
   // Pantalla de login

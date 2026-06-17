@@ -3,7 +3,7 @@ import { supabase, isSupabaseMode } from '../services/supabaseClient'
 
 export const GOOGLE_CLIENT_ID = '628635003355-h1ouuvb7ck5416mv2khc3igkkc1a5dd2.apps.googleusercontent.com'
 
-// Dominio corporativo permitido. Ej: 'carrefour.es'  (vacío = cualquier cuenta)
+// Dominio corporativo permitido. Ej: 'carrefour.es'
 export const ALLOWED_DOMAIN = ''
 
 const USER_KEY = 'crfpvp_user'
@@ -11,7 +11,10 @@ const USER_KEY = 'crfpvp_user'
 function parseJwt(token) {
     const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
     const json = decodeURIComponent(
-        atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
+        atob(base64)
+            .split('')
+            .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .join('')
     )
     return JSON.parse(json)
 }
@@ -69,7 +72,7 @@ export function useAuth() {
             return
         }
 
-        const u = {
+        const authenticatedUser = {
             name: payload.name || email,
             email,
             picture: payload.picture || '',
@@ -77,8 +80,8 @@ export function useAuth() {
             family_name: payload.family_name || '',
         }
 
-        try { sessionStorage.setItem(USER_KEY, JSON.stringify(u)) } catch {}
-        setUser(u)
+        try { sessionStorage.setItem(USER_KEY, JSON.stringify(authenticatedUser)) } catch {}
+        setUser(authenticatedUser)
         setLoading(false)
     }, [])
 
